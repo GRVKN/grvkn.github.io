@@ -1,0 +1,19 @@
+{
+    "name": "GRVKN",
+    "short_name": "GRVKN",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#070908",
+    "theme_color": "#B7FF3C",
+    "description": "Lokale Unternehmen per Video entdecken.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/grvkn.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
