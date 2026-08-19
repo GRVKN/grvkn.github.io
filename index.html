@@ -3,65 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080b09">
-  <meta name="description" content="GRVKN verbindet Menschen, Wirtschaft, Jobs, Wohnen und Veranstaltungen in deiner Region.">
+  <meta name="theme-color" content="#070908">
+  <meta name="description" content="GRVKN bringt Menschen, Betriebe, Jobs, Ausbildung, Immobilien, Veranstaltungen und kommunale Informationen aus deiner Nähe in einen gemeinsamen regionalen Feed.">
   <title>GRVKN – Deine Region in einem Feed</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/grvkn-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="nav wrap">
     <a class="brand" href="/" aria-label="GRVKN Startseite">
-      <span class="brand-mark">G</span>
-      <span>GRVKN <small>(Gräviken)</small></span>
+      <img class="brand-icon" src="/grvkn-mark.svg" alt="">
+      <span class="brand-copy"><strong>GRVKN</strong><small>(Gräviken) · Deine Region in einem Feed.</small></span>
     </a>
-    <a class="nav-cta" href="/app/">App öffnen <span aria-hidden="true">↗</span></a>
+    <nav class="nav-links" aria-label="Hauptnavigation">
+      <a href="#mehrwert">Mehrwert</a>
+      <a href="#so-gehts">So funktioniert’s</a>
+      <a class="nav-cta" href="/app/">App öffnen <span aria-hidden="true">↗</span></a>
+    </nav>
   </header>
 
   <main>
     <section class="hero wrap">
       <div class="hero-copy">
-        <p class="eyebrow"><span></span> Phase 1 · Grafschaft Bentheim</p>
+        <p class="eyebrow"><span></span> Pilotregion · Grafschaft Bentheim</p>
         <h1>Deine Region.<br><em>In einem Feed.</em></h1>
-        <p class="lead">Entdecke echte Betriebe, Jobs und Ausbildung, Immobilien, Veranstaltungen und Neues aus deiner Nähe – einfach, visuell und ohne Gemeindegrenzen.</p>
+        <p class="lead">GRVKN zeigt dir, was in deiner Nähe wirklich zählt – von Betrieben, Jobs und Ausbildung über Immobilien bis zu Veranstaltungen und kommunalen Informationen.</p>
+        <p class="hero-proof">Ein Ort für das regionale Leben. Nach deinem Standort, deinen Interessen und deinem selbst gewählten Umkreis.</p>
         <div class="actions">
           <a class="button primary" href="/app/">Kostenlos entdecken <span aria-hidden="true">→</span></a>
           <a class="button secondary" href="/app/">Kostenlos inserieren</a>
         </div>
-        <p class="micro">Direkt im Browser · Android · iPhone · keine Installation nötig</p>
+        <div class="trust-row" aria-label="Vorteile">
+          <span>✓ Direkt im Browser</span>
+          <span>✓ Standort freiwillig</span>
+          <span>✓ Beiträge geprüft</span>
+        </div>
       </div>
+
       <div class="phone" aria-label="Vorschau des GRVKN Feeds">
         <div class="phone-screen">
           <div class="screen-top"><b>GRVKN</b><span>Für dich</span></div>
           <div class="visual">
-            <span class="visual-tag">JOBS & AUSBILDUNG</span>
-            <div class="visual-icon" aria-hidden="true">⚡</div>
+            <span class="visual-tag">JOBS &amp; AUSBILDUNG</span>
+            <img class="visual-mark" src="/grvkn-mark.svg" alt="">
+            <span class="visual-location">12 km · Nordhorn</span>
           </div>
           <div class="screen-copy">
-            <p class="place">● 12 km · Nordhorn</p>
-            <h2>Zeig, was deine Region kann.</h2>
-            <p>Menschen sehen echte Einblicke statt austauschbarer Werbung.</p>
+            <p class="place">Grafschafter Energietechnik</p>
+            <h2>Sieh den Arbeitsplatz, bevor du dich bewirbst.</h2>
+            <p>Echte Einblicke statt austauschbarer Stellenanzeigen.</p>
             <span class="screen-button">Jetzt entdecken</span>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="statement">
+    <section class="statement" aria-label="GRVKN Themen">
       <div class="wrap statement-inner">
-        <p>Wirtschaft</p><i></i><p>Jobs &amp; Ausbildung</p><i></i><p>Immobilien &amp; Wohnen</p><i></i><p>Region</p>
+        <p>Wirtschaft</p><i></i><p>Jobs &amp; Ausbildung</p><i></i><p>Immobilien &amp; Wohnen</p><i></i><p>Events &amp; Kommune</p>
       </div>
     </section>
 
-    <section class="section wrap" id="bereiche">
-      <p class="eyebrow"><span></span> Alles, was vor Ort zusammengehört</p>
-      <h2 class="section-title">Mehr als Werbung.<br>Ein regionales Netzwerk.</h2>
-      <div class="cards">
-        <article class="card"><b>01</b><div class="card-icon">↗</div><h3>Wirtschaft</h3><p>Betriebe, Handel, Gastronomie und Dienstleistungen zeigen sichtbar, was sie vor Ort leisten.</p></article>
-        <article class="card"><b>02</b><div class="card-icon">✦</div><h3>Jobs &amp; Ausbildung</h3><p>Echte Einblicke in Berufe, Ausbildungsplätze und Arbeitgeber – bevor jemand sich bewirbt.</p></article>
-        <article class="card property"><b>03</b><div class="card-icon">⌂</div><h3>Immobilien &amp; Wohnen</h3><p>Wohnungen, Häuser und WG- oder Azubi-Zimmer, weil ein neuer Job oft auch ein neues Zuhause braucht.</p></article>
-        <article class="card"><b>04</b><div class="card-icon">◎</div><h3>Region &amp; Events</h3><p>Veranstaltungen, Vereine und kommunale Informationen landen dort, wo Menschen sie wirklich sehen.</p></article>
+    <section class="problem section wrap" id="mehrwert">
+      <div class="section-heading split-heading">
+        <div>
+          <p class="eyebrow"><span></span> Warum GRVKN?</p>
+          <h2 class="section-title">Weil eine Region nicht in hundert einzelnen Kanälen lebt.</h2>
+        </div>
+        <p class="section-lead">Jobs stehen auf Jobportalen, Wohnungen auf Immobilienseiten, Veranstaltungen auf Flyern und Neues aus Betrieben irgendwo in sozialen Netzwerken. GRVKN führt das zusammen – lokal, visuell und relevant.</p>
       </div>
+      <div class="difference-grid">
+        <article>
+          <span class="number">01</span>
+          <h3>Keine Gemeindegrenzen</h3>
+          <p>Du entscheidest selbst, ob du deinen Standort nutzt oder einen Ort beziehungsweise eine PLZ eingibst. Der Umkreis folgt deinem Alltag.</p>
+        </article>
+        <article>
+          <span class="number">02</span>
+          <h3>Keine Reichweitenlotterie</h3>
+          <p>Regionale Inhalte werden über Nähe und Interessen auffindbar – nicht nur über Follower, Likes oder komplizierte Werbeanzeigen.</p>
+        </article>
+        <article>
+          <span class="number">03</span>
+          <h3>Alles gehört zusammen</h3>
+          <p>Wer für einen Job oder eine Ausbildung in die Region kommt, braucht oft auch Wohnraum, Einkaufsmöglichkeiten und Anschluss vor Ort.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="value-section" id="zielgruppen">
+      <div class="wrap section">
+        <p class="eyebrow"><span></span> Eine Plattform · Mehrwert für alle</p>
+        <h2 class="section-title">Jeder sieht mehr.<br>Jeder kann sichtbarer werden.</h2>
+        <div class="value-grid">
+          <article class="value-card featured">
+            <span class="value-label">Für Bürgerinnen &amp; Bürger</span>
+            <h3>Die eigene Region neu entdecken.</h3>
+            <p>Finde Angebote, Arbeitgeber, Wohnungen, Veranstaltungen, Gastronomie, Handel und wichtige Informationen aus deiner tatsächlichen Umgebung.</p>
+            <ul>
+              <li>persönlicher Umkreis statt starrer Ortsgrenze</li>
+              <li>Interessen selbst auswählen</li>
+              <li>speichern, informieren und direkt Kontakt aufnehmen</li>
+            </ul>
+          </article>
+          <article class="value-card">
+            <span class="value-label">Für Betriebe &amp; Handel</span>
+            <h3>Vor Ort gefunden werden.</h3>
+            <p>Zeig Leistungen, Produkte, freie Stellen und echte Einblicke genau den Menschen, die in erreichbarer Nähe leben.</p>
+          </article>
+          <article class="value-card">
+            <span class="value-label">Für Jobs &amp; Ausbildung</span>
+            <h3>Arbeit erlebbar machen.</h3>
+            <p>Bewerber und Azubis sehen, wie ein Beruf und ein Betrieb wirklich aussehen – bevor sie sich entscheiden.</p>
+          </article>
+          <article class="value-card property">
+            <span class="value-label">Für Vermieter &amp; Suchende</span>
+            <h3>Arbeit und Wohnen verbinden.</h3>
+            <p>Wohnungen, Häuser, WGs und Azubi-Zimmer werden Teil derselben regionalen Suche wie Jobs und Ausbildung.</p>
+          </article>
+          <article class="value-card">
+            <span class="value-label">Für Vereine &amp; Kommunen</span>
+            <h3>Menschen direkt erreichen.</h3>
+            <p>Veranstaltungen, Angebote, Beteiligung und wichtige Hinweise landen verständlich und sichtbar im regionalen Alltag.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="how section wrap" id="so-gehts">
+      <div class="section-heading">
+        <p class="eyebrow"><span></span> Einfach starten</p>
+        <h2 class="section-title">Drei Schritte.<br>Eine relevante Region.</h2>
+      </div>
+      <ol class="steps">
+        <li><span>1</span><div><h3>Ort bestimmen</h3><p>Standort freiwillig freigeben oder Ort beziehungsweise PLZ eingeben.</p></div></li>
+        <li><span>2</span><div><h3>Umkreis &amp; Interessen wählen</h3><p>Du bestimmst selbst, was du sehen möchtest und wie weit die Suche reicht.</p></div></li>
+        <li><span>3</span><div><h3>Entdecken oder selbst zeigen</h3><p>Inhalte ansehen, speichern und Kontakt aufnehmen – oder kostenlos einen eigenen Beitrag einreichen.</p></div></li>
+      </ol>
     </section>
 
     <section class="location-section">
@@ -72,18 +150,33 @@
           <p class="location-copy">GRVKN fragt zuerst nach deiner Erlaubnis. Wer seinen Standort nicht freigeben möchte, sucht einfach per Postleitzahl oder Ortsname. Den Umkreis bestimmst du selbst – unabhängig von Gemeinde- oder Kreisgrenzen.</p>
         </div>
         <div class="search-demo">
-          <div class="search-row"><span>⌖</span><div><small>MEIN STANDORT</small><strong>Aktuellen Standort verwenden</strong></div><b>→</b></div>
+          <div class="search-row"><span aria-hidden="true">⌖</span><div><small>MEIN STANDORT</small><strong>Aktuellen Standort verwenden</strong></div><b>→</b></div>
           <div class="or"><span></span>ODER<span></span></div>
-          <div class="search-row"><span>⌕</span><div><small>ORT ODER PLZ</small><strong>48529 Nordhorn</strong></div><b>→</b></div>
+          <div class="search-row"><span aria-hidden="true">⌕</span><div><small>ORT ODER PLZ</small><strong>48529 Nordhorn</strong></div><b>→</b></div>
           <div class="radius"><span>Umkreis</span><b>50 km</b><div><i></i></div></div>
         </div>
       </div>
     </section>
 
+    <section class="pilot wrap">
+      <div class="pilot-copy">
+        <p class="eyebrow"><span></span> Phase 1 · Gemeinsam aufbauen</p>
+        <h2>Keine leere Werbeidee.<br>Eine nutzbare regionale Infrastruktur.</h2>
+        <p>Die Web-App ist erreichbar, Registrierung und Inserate laufen über die Live-Datenbank. Zum Start bleibt die Teilnahme kostenlos; eingereichte Beiträge werden vor der Veröffentlichung geprüft.</p>
+      </div>
+      <div class="pilot-facts">
+        <span><b>01</b> Im Browser, auf Android und iPhone nutzbar</span>
+        <span><b>02</b> Für die gesamte Region statt einzelner Silos</span>
+        <span><b>03</b> Deutsch und Englisch umschaltbar</span>
+        <span><b>04</b> Standort nur nach Zustimmung</span>
+      </div>
+    </section>
+
     <section class="final wrap">
+      <img class="final-mark" src="/grvkn-mark.svg" alt="">
       <p class="eyebrow"><span></span> Jetzt gemeinsam starten</p>
       <h2>Mach deine Region sichtbar.</h2>
-      <p>Im Browser öffnen, kostenlos registrieren und den ersten Beitrag einreichen. Jeder Beitrag wird vor der Veröffentlichung geprüft.</p>
+      <p>Öffne GRVKN direkt im Browser, entdecke deine Umgebung oder registriere dich kostenlos und reiche den ersten Beitrag ein.</p>
       <div class="actions center">
         <a class="button primary" href="/app/">GRVKN öffnen <span aria-hidden="true">→</span></a>
       </div>
@@ -91,9 +184,9 @@
   </main>
 
   <footer class="wrap footer">
-    <div class="brand"><span class="brand-mark">G</span><span>GRVKN</span></div>
-    <p>Deine Region in einem Feed.</p>
-    <p>Phase 1 · Grafschaft Bentheim</p>
+    <div class="brand"><img class="brand-icon" src="/grvkn-mark.svg" alt=""><span class="brand-copy"><strong>GRVKN</strong><small>Deine Region in einem Feed.</small></span></div>
+    <p>Pilotregion · Grafschaft Bentheim</p>
+    <a href="/app/">App öffnen ↗</a>
   </footer>
 </body>
 </html>
