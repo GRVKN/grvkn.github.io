@@ -1,38 +1,99 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="de">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="/">
-
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Lokale Unternehmen per Video entdecken.">
-
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="GRVKN">
-  <link rel="apple-touch-icon" href="icons/grvkn.svg">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="icons/grvkn.svg"/>
-
-  <title>GRVKN</title>
-  <link rel="manifest" href="manifest.json">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b09">
+  <meta name="description" content="GRVKN verbindet Menschen, Wirtschaft, Jobs, Wohnen und Veranstaltungen in deiner Region.">
+  <title>GRVKN – Deine Region in einem Feed</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <header class="nav wrap">
+    <a class="brand" href="/" aria-label="GRVKN Startseite">
+      <span class="brand-mark">G</span>
+      <span>GRVKN <small>(Gräviken)</small></span>
+    </a>
+    <a class="nav-cta" href="/app/">App öffnen <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Phase 1 · Grafschaft Bentheim</p>
+        <h1>Deine Region.<br><em>In einem Feed.</em></h1>
+        <p class="lead">Entdecke echte Betriebe, Jobs und Ausbildung, Immobilien, Veranstaltungen und Neues aus deiner Nähe – einfach, visuell und ohne Gemeindegrenzen.</p>
+        <div class="actions">
+          <a class="button primary" href="/app/">Kostenlos entdecken <span aria-hidden="true">→</span></a>
+          <a class="button secondary" href="/app/">Kostenlos inserieren</a>
+        </div>
+        <p class="micro">Direkt im Browser · Android · iPhone · keine Installation nötig</p>
+      </div>
+      <div class="phone" aria-label="Vorschau des GRVKN Feeds">
+        <div class="phone-screen">
+          <div class="screen-top"><b>GRVKN</b><span>Für dich</span></div>
+          <div class="visual">
+            <span class="visual-tag">JOBS & AUSBILDUNG</span>
+            <div class="visual-icon" aria-hidden="true">⚡</div>
+          </div>
+          <div class="screen-copy">
+            <p class="place">● 12 km · Nordhorn</p>
+            <h2>Zeig, was deine Region kann.</h2>
+            <p>Menschen sehen echte Einblicke statt austauschbarer Werbung.</p>
+            <span class="screen-button">Jetzt entdecken</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="statement">
+      <div class="wrap statement-inner">
+        <p>Wirtschaft</p><i></i><p>Jobs &amp; Ausbildung</p><i></i><p>Immobilien &amp; Wohnen</p><i></i><p>Region</p>
+      </div>
+    </section>
+
+    <section class="section wrap" id="bereiche">
+      <p class="eyebrow"><span></span> Alles, was vor Ort zusammengehört</p>
+      <h2 class="section-title">Mehr als Werbung.<br>Ein regionales Netzwerk.</h2>
+      <div class="cards">
+        <article class="card"><b>01</b><div class="card-icon">↗</div><h3>Wirtschaft</h3><p>Betriebe, Handel, Gastronomie und Dienstleistungen zeigen sichtbar, was sie vor Ort leisten.</p></article>
+        <article class="card"><b>02</b><div class="card-icon">✦</div><h3>Jobs &amp; Ausbildung</h3><p>Echte Einblicke in Berufe, Ausbildungsplätze und Arbeitgeber – bevor jemand sich bewirbt.</p></article>
+        <article class="card property"><b>03</b><div class="card-icon">⌂</div><h3>Immobilien &amp; Wohnen</h3><p>Wohnungen, Häuser und WG- oder Azubi-Zimmer, weil ein neuer Job oft auch ein neues Zuhause braucht.</p></article>
+        <article class="card"><b>04</b><div class="card-icon">◎</div><h3>Region &amp; Events</h3><p>Veranstaltungen, Vereine und kommunale Informationen landen dort, wo Menschen sie wirklich sehen.</p></article>
+      </div>
+    </section>
+
+    <section class="location-section">
+      <div class="wrap location-grid">
+        <div>
+          <p class="eyebrow"><span></span> Deine Nähe, deine Entscheidung</p>
+          <h2 class="section-title">Standort nutzen.<br>Oder Ort eingeben.</h2>
+          <p class="location-copy">GRVKN fragt zuerst nach deiner Erlaubnis. Wer seinen Standort nicht freigeben möchte, sucht einfach per Postleitzahl oder Ortsname. Den Umkreis bestimmst du selbst – unabhängig von Gemeinde- oder Kreisgrenzen.</p>
+        </div>
+        <div class="search-demo">
+          <div class="search-row"><span>⌖</span><div><small>MEIN STANDORT</small><strong>Aktuellen Standort verwenden</strong></div><b>→</b></div>
+          <div class="or"><span></span>ODER<span></span></div>
+          <div class="search-row"><span>⌕</span><div><small>ORT ODER PLZ</small><strong>48529 Nordhorn</strong></div><b>→</b></div>
+          <div class="radius"><span>Umkreis</span><b>50 km</b><div><i></i></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="final wrap">
+      <p class="eyebrow"><span></span> Jetzt gemeinsam starten</p>
+      <h2>Mach deine Region sichtbar.</h2>
+      <p>Im Browser öffnen, kostenlos registrieren und den ersten Beitrag einreichen. Jeder Beitrag wird vor der Veröffentlichung geprüft.</p>
+      <div class="actions center">
+        <a class="button primary" href="/app/">GRVKN öffnen <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <div class="brand"><span class="brand-mark">G</span><span>GRVKN</span></div>
+    <p>Deine Region in einem Feed.</p>
+    <p>Phase 1 · Grafschaft Bentheim</p>
+  </footer>
 </body>
 </html>
