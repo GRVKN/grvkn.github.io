@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,follow" />
+    <meta name="theme-color" content="#0b0d0a" />
+    <title>GRVKN · Video öffnen</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b0d0a;
+        color: #f7f8f3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: radial-gradient(circle at top, #202b1c, #0b0d0a 58%);
+      }
+
+      main {
+        width: min(100%, 460px);
+        padding: 34px;
+        text-align: center;
+        border: 1px solid rgba(183, 255, 60, 0.2);
+        border-radius: 28px;
+        background: rgba(19, 23, 17, 0.94);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+      }
+
+      .mark {
+        color: #b7ff3c;
+        font-size: 28px;
+        font-weight: 900;
+        letter-spacing: 0.2em;
+      }
+
+      h1 {
+        margin: 24px 0 10px;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0;
+        color: #b9c0b4;
+        line-height: 1.55;
+      }
+
+      a {
+        display: inline-flex;
+        margin-top: 24px;
+        padding: 13px 20px;
+        color: #10130e;
+        background: #b7ff3c;
+        border-radius: 999px;
+        font-weight: 850;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark">GRVKN</div>
+      <h1 id="title">Video wird geöffnet …</h1>
+      <p id="message">Du wirst direkt zum öffentlichen Beitrag weitergeleitet.</p>
+      <a id="fallback" href="/app/">GRVKN öffnen</a>
+    </main>
+    <script>
+      (() => {
+        const id = new URLSearchParams(window.location.search).get("id") || "";
+        const validId = /^[A-Za-z0-9_-]{1,128}$/.test(id);
+        const title = document.getElementById("title");
+        const message = document.getElementById("message");
+        const fallback = document.getElementById("fallback");
+
+        if (!validId) {
+          title.textContent = "Dieser Beitragslink ist ungültig.";
+          message.textContent =
+            "Öffne GRVKN und entdecke aktuelle Videos aus deiner Region.";
+          return;
+        }
+
+        const target = new URL("../app/", window.location.href);
+        target.searchParams.set("video", id);
+        fallback.href = target.toString();
+        window.location.replace(target.toString());
+      })();
+    </script>
+  </body>
+</html>
