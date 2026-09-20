@@ -1,0 +1,33 @@
+{
+  "id": "/app/",
+  "name": "GRVKN – Deine Region in einem Feed",
+  "short_name": "GRVKN",
+  "description": "Entdecke Betriebe, Jobs, Immobilien und Veranstaltungen aus deiner Region in einem Feed.",
+  "lang": "de-DE",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070908",
+  "theme_color": "#B7FF3C",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/grvkn-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/grvkn-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/grvkn-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

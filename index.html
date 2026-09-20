@@ -5,9 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070908">
   <meta name="description" content="GRVKN bringt Menschen, Betriebe, Jobs, Ausbildung, Immobilien, Veranstaltungen und kommunale Informationen aus deiner Nähe in einen gemeinsamen regionalen Feed.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GRVKN">
   <title>GRVKN – Deine Region in einem Feed</title>
   <link rel="icon" href="/grvkn-mark.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/grvkn-icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/pwa-install.js" defer></script>
 </head>
 <body>
   <header class="nav wrap">
@@ -33,6 +40,13 @@
         <div class="actions">
           <a class="button primary" href="/app/">Kostenlos entdecken <span aria-hidden="true">→</span></a>
           <a class="button secondary" href="/app/?entry=business">Als Anbieter teilnehmen</a>
+        </div>
+        <div class="install-action">
+          <button class="button install-button" id="install-app-button" type="button">
+            <span class="install-icon" data-install-icon aria-hidden="true">↓</span>
+            <span data-install-label>GRVKN installieren</span>
+          </button>
+          <span class="install-note">Kostenlos · ohne App Store</span>
         </div>
         <div class="trust-row" aria-label="Vorteile">
           <span>✓ Direkt im Browser</span>
@@ -208,5 +222,22 @@
       <a href="/app/">App öffnen ↗</a>
     </div>
   </footer>
+
+  <dialog class="install-dialog" id="install-help-dialog" aria-labelledby="install-dialog-title">
+    <div class="install-dialog-mark" aria-hidden="true">
+      <img src="/grvkn-mark.svg" alt="">
+    </div>
+    <p class="eyebrow"><span></span> GRVKN wie eine App nutzen</p>
+    <h2 id="install-dialog-title">GRVKN installieren</h2>
+    <div id="install-dialog-copy">
+      <p>Öffne das Browsermenü und wähle <strong>„App installieren“</strong> oder <strong>„Zum Startbildschirm hinzufügen“</strong>.</p>
+    </div>
+    <div class="install-dialog-actions">
+      <a class="button primary" href="/app/">GRVKN öffnen <span aria-hidden="true">→</span></a>
+      <form method="dialog">
+        <button class="button secondary" type="submit">Schließen</button>
+      </form>
+    </div>
+  </dialog>
 </body>
 </html>
