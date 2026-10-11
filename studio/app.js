@@ -323,8 +323,6 @@ function render() {
   if (activeProduction() && !busy && !exportRunning) document.querySelectorAll('[data-action="resume-production"], [data-action="cancel-production"]').forEach(button => { button.disabled = false; });
   $('#preview-empty').hidden = view !== 'upload' || !!uploadFile;
   $('#below-editor').innerHTML = `${icon('lock')}<span>${view === 'upload' ? 'Originaldatei auf deinem Gerät · Export mit Kennzeichnung' : cloud.ready && !project.demoOnly ? 'Privat gespeichert in deinem Studio' : 'Demo-Entwürfe in diesem Browser'}</span><span class="below-version">${view === 'studio' ? project.demoOnly ? 'FIKTIVES BEISPIEL' : 'PREMIUM · PILOT' : 'VIDEO VORBEREITEN'}</span>`;
-  $('#editor [data-field="company"]')?.setAttribute('disabled', '');
-  $('#editor [data-field="providerType"]')?.setAttribute('disabled', '');
   updateConnectionNotice();
   $('#connection-notice').hidden = view === 'sharing';
   syncPreviewUi();
@@ -470,7 +468,7 @@ document.addEventListener('input', event => {
     const key = element.dataset.field;
     project[key] = key === 'duration' ? Number(element.value) : element.value;
     if (['company','providerType','city','website','facts'].includes(key)) {
-      project.confirmed = false; project.demoOnly = false; candidates = [];
+      project.confirmed = false; candidates = [];
       const confirm = $('#company-confirmed'); if (confirm) confirm.checked = false;
       researchShown = false;
       $('.research-result')?.remove();
@@ -908,3 +906,4 @@ document.addEventListener('click', async event => {
 });
 const requestedAd = new URL(location.href).searchParams.get('ad');
 if (requestedAd) { try { prepareReplacement(requestedAd); project.grvknAdId = requestedAd; navigate('upload'); } catch (error) { toast(error.message); } }
+

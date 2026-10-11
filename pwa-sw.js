@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grvkn-install-shell-v1';
+const CACHE_NAME = 'grvkn-install-shell-v2';
 const LANDING_SHELL = [
   '/',
   '/styles.css',
@@ -45,3 +45,4 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cached) => cached || fetch(event.request)),
   );
 });
+
