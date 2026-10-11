@@ -13,8 +13,8 @@ const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}
 const STORAGE_KEY = 'grvkn-studio-projects-v1:' + studioOwner();
 let projects = [];
 try { const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); if (Array.isArray(items)) projects = items.slice(0, 30).map(safeProject); } catch {}
-let project = createProject();
-Object.assign(project, { company: account.business.name, companyId: `${account.provider.business_id}_${account.user.id}`, providerType: account.provider.provider_type, city: account.locations[0]?.city || '', website: account.business.website_url || '', facts: account.business.description || '' });
+const newProviderProject = () => Object.assign(createProject(), { company: account.business.name, companyId: `${account.provider.business_id}_${account.user.id}`, providerType: account.provider.provider_type, city: account.locations[0]?.city || '', website: account.business.website_url || '', facts: account.business.description || '' });
+let project = newProviderProject();
 let view = 'studio';
 let step = 1;
 let expandedScene = 0;
@@ -432,7 +432,7 @@ document.addEventListener('click', async event => {
     download(new Blob([JSON.stringify(projectManifest(project, productionJob), null, 2)], { type: 'application/json' }), safeFilename(project.company) + '-storyboard.json');
     toast('Storyboard heruntergeladen. Fotos und Logo sind nicht in der JSON-Datei enthalten.');
   }
-  if (action === 'new-project') { resetAssets(); project = createProject(); if (cloud.companies[0]) applyCompany(cloud.companies[0]); step = 1; researchShown = false; navigate('studio'); }
+  if (action === 'new-project') { resetAssets(); project = newProviderProject(); if (cloud.companies[0]) applyCompany(cloud.companies[0]); step = 1; researchShown = false; navigate('studio'); }
   if (action === 'load-project') {
     const found = projects.find(item => item.id === button.dataset.id);
     if (!found) return;
@@ -498,7 +498,7 @@ document.addEventListener('change', event => {
     project.approved = event.target.checked; project.status = project.approved ? 'Geprüft' : 'Entwurf';
     render();
   }
-  if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = createProject(); if (selected) applyCompany(selected); step = 1; render(); }
+  if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject(); if (selected) applyCompany(selected); step = 1; render(); }
   if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; render(); }
   if (event.target.id === 'cost-consent') { costConsent = event.target.checked; render(); }
   if (event.target.id === 'upload-ai') { uploadContainsAi = event.target.checked; uploadApproved = false; exportState = null; render(); }
