@@ -1,0 +1,18 @@
+.sharing-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,.9fr);gap:28px;align-items:start}
+.sharing-card,.sharing-preview{background:#111512;border:1px solid #293029;border-radius:16px;padding:30px}
+.sharing-card h2{font-size:32px;line-height:1.2;letter-spacing:-.035em;margin:20px 0 14px;color:#fff}
+.sharing-card p{color:#a7b0aa;line-height:1.7;font-size:13px}
+.sharing-card form{display:grid;gap:18px;margin:26px 0}
+.sharing-card .field input{width:100%;min-width:0}
+.sharing-card .note{align-items:start;margin:24px 0;line-height:1.65}
+.sharing-actions,.sharing-downloads{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.sharing-preview{text-align:center}.sharing-preview>p{font-size:12px;line-height:1.6;color:#a7b0aa}
+.sharing-downloads{justify-content:center}.qr-paper{background:#fff;color:#070908;padding:18px 18px 24px;border-radius:8px;max-width:330px;margin:auto}
+.qr-image svg{display:block;width:100%;height:auto;shape-rendering:crispEdges}
+.qr-paper>strong{display:block;font-size:28px;font-weight:900;letter-spacing:.14em;margin-top:8px}
+.qr-paper>span{display:block;font-size:9px;font-weight:700;letter-spacing:.06em;margin-top:9px}
+.qr-placeholder{min-height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a7b0aa}
+.qr-placeholder>.icon{width:58px;height:58px;color:#b7ff3c}.qr-placeholder h3{font-size:17px;color:#fff;margin:22px 0 8px}.qr-placeholder p{font-size:12px;line-height:1.6;max-width:240px}
+.access-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px;text-align:left}.access-table th,.access-table td{padding:12px;border-bottom:1px solid #293029;vertical-align:top;line-height:1.6}.access-table th{color:#fff}.access-table td{color:#a7b0aa}
+@media(max-width:1050px){.sharing-layout{grid-template-columns:1fr}.sharing-preview{max-width:460px;width:100%;justify-self:center}}
+@media(max-width:600px){.sharing-card,.sharing-preview{padding:22px 17px}.sharing-card h2{font-size:26px}.sharing-actions,.sharing-downloads{flex-direction:column}.access-table th,.access-table td{padding:10px 6px;font-size:11px}}
