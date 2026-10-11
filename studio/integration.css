@@ -1,1 +1,13 @@
 #studio-access{min-height:100dvh;display:grid;place-items:center;padding:32px;background:#11120f}#studio-access[hidden],#studio-root[hidden]{display:none!important}.access-card{width:min(100%,530px);padding:36px;border:1px solid #33372b;border-radius:28px;background:#191c15;color:#fafbf4}.access-card .brand{margin-bottom:42px}.access-card h1{font-size:36px;line-height:1.1;margin-bottom:20px}.access-card p{color:#b4baa8;line-height:1.6;margin:20px 0}.access-card .button{margin:10px 6px 0 0}.access-card form{display:grid;gap:16px;margin:24px 0}.provider-choice{display:block;width:100%}.submission-form{display:grid;gap:14px;margin-top:24px}.submission-form h3{font-size:20px}.submission-form .field{margin:0}.submission-form .field textarea{min-height:110px}.ad-picker{margin:18px 0}.submission-result{padding:16px;border:1px solid #a3c55b;border-radius:12px;margin-top:20px}.topbar-right .button{padding:8px 12px;font-size:12px}@media(max-width:700px){.access-card{padding:24px}.topbar-right .workspace-label{display:none}.topbar-right{gap:4px}.topbar-right .prototype-tag{display:none}}
+
+.provider-identity{margin:20px 0;padding:18px;border:1px solid #b7ff3c55;border-radius:12px;background:var(--raised)}
+.provider-identity-heading{display:flex;align-items:center;gap:8px;color:var(--accent);font-size:12px}
+.provider-identity-heading .icon{width:17px;height:17px}
+.provider-identity dl{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:16px;margin:17px 0}
+.provider-identity dt{font-size:10px;color:var(--muted);margin-bottom:6px}
+.provider-identity dd{margin:0;font-size:14px;font-weight:650;color:var(--ink);overflow-wrap:anywhere}
+.provider-identity p{font-size:11px;color:var(--muted)}
+.provider-identity .provider-video-hint{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink)}
+.provider-identity>a{display:inline-block;margin-top:12px;font-size:11px;text-underline-offset:3px}
+@media(max-width:500px){.provider-identity{padding:15px}.provider-identity dl{grid-template-columns:1fr;gap:13px}}
+

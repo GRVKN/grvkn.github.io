@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070908">
-  <meta name="description" content="GRVKN bringt Menschen, Betriebe, Jobs, Ausbildung, Immobilien, Veranstaltungen und kommunale Informationen aus deiner Nähe in einen gemeinsamen regionalen Feed.">
+  <meta name="description" content="Entdecke deine Region mit GRVKN. Freigegebene Anbieter laden im GRVKN Studio eigene Videos hoch und teilen Beiträge per Link und QR-Code. KI-Unterstützung wird als separates Paket vorbereitet.">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +13,7 @@
   <link rel="icon" href="/grvkn-mark.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/grvkn-icon-192.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20261011-studio">
   <script src="/pwa-install.js" defer></script>
 </head>
 <body>
@@ -25,6 +25,7 @@
     <nav class="nav-links" aria-label="Hauptnavigation">
       <a href="#mehrwert">Mehrwert</a>
       <a href="#so-gehts">So funktioniert’s</a>
+      <a href="#studio">GRVKN Studio</a>
       <a href="#mitmachen">Mitmachen</a>
       <a class="nav-cta" href="/app/">App öffnen <span aria-hidden="true">↗</span></a>
     </nav>
@@ -41,6 +42,7 @@
           <a class="button primary" href="/app/">Kostenlos entdecken <span aria-hidden="true">→</span></a>
           <a class="button secondary" href="/app/?entry=business">Als Anbieter teilnehmen</a>
         </div>
+        <a class="hero-studio-link" href="#studio">Eigene Videos zeigen? Entdecke das GRVKN Studio <span aria-hidden="true">↗</span></a>
         <div class="install-action">
           <button class="button install-button" id="install-app-button" type="button">
             <span class="install-icon" data-install-icon aria-hidden="true">↓</span>
@@ -149,6 +151,58 @@
       </div>
     </section>
 
+    <section class="studio-section" id="studio" aria-labelledby="studio-heading">
+      <div class="wrap section">
+        <div class="section-heading split-heading">
+          <div>
+            <p class="eyebrow"><span></span> GRVKN Studio · Dein Auftritt vor Ort</p>
+            <h2 class="section-title" id="studio-heading">Zeig, was euch<br>ausmacht.</h2>
+          </div>
+          <p class="section-lead">Ein Ort für eure Videos, Ideen und Beiträge. Für Unternehmen, Vereine, Veranstalter, Kommunen, Einrichtungen und Vermieter – mit eurem freigegebenen Anbieterprofil als Absender.</p>
+        </div>
+        <div class="studio-features">
+          <article class="studio-feature">
+            <span class="studio-status"><span aria-hidden="true">●</span> Nach Anbieterfreigabe nutzbar</span>
+            <span class="studio-feature-number" aria-hidden="true">01 / VIDEO</span>
+            <h3>Euer Video.<br>Euer Auftritt.</h3>
+            <p>Ladet ein vorhandenes Video hoch, ergänzt Titel, Bereich und Kontaktmöglichkeit und reicht es zur Prüfung ein. Name und Anbieterart übernimmt das Studio aus eurem verifizierten Profil.</p>
+            <p class="studio-feature-note">Enthält das Video KI-Inhalte, setzt ihr das Häkchen. Beim Studio-Export wird „Mit KI generiert“ sichtbar ins Video eingebettet.</p>
+          </article>
+          <article class="studio-feature">
+            <span class="studio-status"><span aria-hidden="true">●</span> Im Studio verfügbar</span>
+            <span class="studio-feature-number" aria-hidden="true">02 / LINK &amp; QR</span>
+            <h3>Ein Beitrag.<br>Viele Wege dorthin.</h3>
+            <p>Jeder angelegte Videobeitrag erhält einen dauerhaften Link und einen QR-Code. Nutzt sie auf Flyern, an der Ladentür, auf eurer Website oder bei Veranstaltungen.</p>
+            <p class="studio-feature-note">Nach der Moderationsfreigabe ist das Video öffentlich erreichbar. Auch beim Ersetzen des Videos bleiben Link und QR-Code gleich.</p>
+          </article>
+          <article class="studio-feature studio-feature-ai">
+            <span class="studio-status preparing">KI-Paket · In Vorbereitung</span>
+            <span class="studio-feature-number" aria-hidden="true">03 / KI-UNTERSTÜTZUNG</span>
+            <h3>Von eurer Idee<br>zum Videovorschlag.</h3>
+            <p>Für das separate KI-Paket ist geplant: Homepage recherchieren, eigene Fotos auswerten und passende Texte und Szenen aus eurem Videowunsch entwickeln. Optional kommen KI-Stimme und generierte Bewegtbilder hinzu.</p>
+            <p class="studio-feature-note">Die echte KI-Produktion ist noch nicht allgemein freigeschaltet. Vor einer kostenpflichtigen Produktion prüft und bestätigt ihr Vorschlag und Kosten.</p>
+          </article>
+        </div>
+        <div class="studio-access">
+          <div class="studio-access-intro">
+            <p class="eyebrow"><span></span> Ein Konto reicht</p>
+            <h3>Dein Zugang zum Studio.</h3>
+            <p>Videos ansehen bleibt kostenlos und funktioniert ohne Anmeldung. Mit einem kostenlosen Konto kannst du kommentieren und Beiträge merken. Für eigene Videos ergänzt du ein Anbieterprofil.</p>
+            <div class="actions">
+              <a class="button primary" href="/studio/">Studio öffnen <span aria-hidden="true">↗</span></a>
+              <a class="button secondary" href="/app/?entry=business">Anbieterprofil einrichten</a>
+            </div>
+          </div>
+          <ol class="studio-access-steps" aria-label="So erhältst du Zugang">
+            <li><span>1</span><div><h4>Anmelden oder registrieren</h4><p>Dein vorhandenes GRVKN-Konto gilt auch im Studio. Eine zweite Registrierung ist nicht nötig.</p></div></li>
+            <li><span>2</span><div><h4>Anbieterprofil prüfen lassen</h4><p>Name, Standort und optional Website hinterlegen. GRVKN prüft das Profil und gibt den Anbieterzugang frei.</p></div></li>
+            <li><span>3</span><div><h4>Video einreichen</h4><p>Im Studio vorbereiten und zur Moderation einreichen. Der Beitrag wird erst nach Freigabe öffentlich.</p></div></li>
+          </ol>
+        </div>
+        <p class="studio-package-note">Die Anbieterfreigabe, die Veröffentlichung eines Videos und die Aktivierung des KI-Pakets sind separate Schritte. Das KI-Paket gehört nicht automatisch zum kostenlosen Nutzerkonto.</p>
+      </div>
+    </section>
+
     <section class="how section wrap" id="so-gehts">
       <div class="section-heading">
         <p class="eyebrow"><span></span> Einfach starten</p>
@@ -157,7 +211,7 @@
       <ol class="steps">
         <li><span>1</span><div><h3>Ort bestimmen</h3><p>Standort freiwillig freigeben oder Ort beziehungsweise PLZ eingeben.</p></div></li>
         <li><span>2</span><div><h3>Umkreis &amp; Interessen wählen</h3><p>Du bestimmst selbst, was du sehen möchtest und wie weit die Suche reicht.</p></div></li>
-        <li><span>3</span><div><h3>Entdecken oder selbst zeigen</h3><p>Inhalte ansehen, speichern und Kontakt aufnehmen – oder kostenlos einen eigenen Beitrag einreichen.</p></div></li>
+        <li><span>3</span><div><h3>Entdecken oder selbst zeigen</h3><p>Inhalte ansehen und Kontakt aufnehmen. Mit einem Konto kannst du Beiträge merken; freigegebene Anbieter reichen eigene Videos im Studio ein.</p></div></li>
       </ol>
     </section>
 
@@ -206,11 +260,11 @@
         <article class="join-card provider">
           <span class="join-label">Für Anbieter</span>
           <h3>Zeig, was du vor Ort anbietest.</h3>
-          <p>Registriere dich, richte deinen Anbieterbereich ein und reiche deinen ersten Beitrag zur Prüfung ein.</p>
+          <p>Melde dich an, ergänze dein Anbieterprofil und lass es freigeben. Danach bereitest du deinen ersten Beitrag im GRVKN Studio vor.</p>
           <a class="button secondary" href="/app/?entry=business">Als Anbieter teilnehmen <span aria-hidden="true">→</span></a>
         </article>
       </div>
-      <p class="participation-note">Pilotphase · Teilnahme kostenlos · Beiträge werden vor der Veröffentlichung geprüft</p>
+      <p class="participation-note">Pilotphase · Teilnahme kostenlos · Anbieter und Beiträge werden geprüft · KI-Produktion separat</p>
     </section>
   </main>
 
@@ -242,3 +296,4 @@
   </dialog>
 </body>
 </html>
+
