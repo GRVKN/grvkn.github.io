@@ -3,13 +3,41 @@ export function approvedProviders(rows) {
   return (Array.isArray(rows) ? rows : []).filter(row => UUID.test(row.business_id || '') && row.studio_allowed === true && row.provider_status === 'active' && row.verification_status === 'verified' && ['owner', 'admin', 'editor'].includes(row.member_role));
 }
 export function sessionStorageAdapter(storage) {
-  // Flutter SharedPreferences stores the same session under its own prefix,
-  // with an extra JSON string layer. Flutter logout removes this authoritative key.
-  // Never revive a signed-out session from the JavaScript compatibility copy.
+  // supabase_flutter 2.15.4 stores raw web sessions at the native auth key.
+  // Migrate the older SharedPreferences format once; after that, the native
+  // key is authoritative, including deletion by the Flutter sign-out flow.
+  const formatKey = key => 'grvkn-studio-auth-format:' + key;
   return {
-    getItem(key) { const value = storage.getItem('flutter.' + key); if (value !== null) { try { const decoded = JSON.parse(value); if (typeof decoded === 'string') return decoded; } catch {} return value; } return null; },
-    setItem(key, value) { storage.setItem(key, value); storage.setItem('flutter.' + key, JSON.stringify(value)); },
-    removeItem(key) { storage.removeItem(key); storage.removeItem('flutter.' + key); },
+    getItem(key) {
+      const native = storage.getItem(key);
+      if (native !== null) {
+        storage.setItem(formatKey(key), 'native');
+        storage.removeItem('flutter.' + key);
+        return native;
+      }
+      if (storage.getItem(formatKey(key)) === 'native') {
+        storage.removeItem('flutter.' + key);
+        return null;
+      }
+      const legacy = storage.getItem('flutter.' + key);
+      if (legacy === null) return null;
+      let value = legacy;
+      try { const decoded = JSON.parse(legacy); if (typeof decoded === 'string') value = decoded; } catch {}
+      storage.setItem(key, value);
+      storage.setItem(formatKey(key), 'native');
+      storage.removeItem('flutter.' + key);
+      return value;
+    },
+    setItem(key, value) {
+      storage.setItem(key, value);
+      storage.setItem(formatKey(key), 'native');
+      storage.removeItem('flutter.' + key);
+    },
+    removeItem(key) {
+      storage.setItem(formatKey(key), 'native');
+      storage.removeItem(key);
+      storage.removeItem('flutter.' + key);
+    },
   };
 }
 export function validateSubmission(input) {
