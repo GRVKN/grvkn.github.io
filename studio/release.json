@@ -1,6 +1,6 @@
 {
   "sourceRepository": "GRVKN/grvkn-app",
-  "sourceCommit": "0d22a012c14af50520b58da906bde350d22d715a",
+  "sourceCommit": "24c08882dfefc017e978c2d4206e24cd5f9fcd25",
   "backendFunction": "grvkn-studio",
   "backendUrl": "https://mdhuljyjrcrktyzfugzv.supabase.co/functions/v1/grvkn-studio",
   "persistentMp4RequiresWorker": true
