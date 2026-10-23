@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRVKN Studio</title><meta name="description" content="Dein Studio für regionale Videos, Angebote und Recruiting."><link rel="icon" href="/studio/assets/grvkn-mark.svg"><link rel="stylesheet" href="/studio/style.css"><link rel="stylesheet" href="/studio/brand.css"><link rel="stylesheet" href="/studio/pilot.css"><link rel="stylesheet" href="/studio/sharing.css"><link rel="stylesheet" href="/studio/integration.css"></head><body><div id="studio-access" role="status" aria-live="polite">Dein Studio wird geladen …</div><div id="studio-root" hidden><svg aria-hidden="true" class="icon-defs" xmlns="http://www.w3.org/2000/svg">
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRVKN Studio</title><meta name="description" content="Dein Studio für regionale Videos, Angebote und Recruiting."><link rel="icon" href="/studio/assets/grvkn-mark.svg"><link rel="stylesheet" href="/studio/style.css"><link rel="stylesheet" href="/studio/brand.css"><link rel="stylesheet" href="/studio/pilot.css"><link rel="stylesheet" href="/studio/sharing.css"><link rel="stylesheet" href="/studio/integration.css">  <link rel="stylesheet" href="/studio/workflow.css">
+</head><body><div id="studio-access" role="status" aria-live="polite">Dein Studio wird geladen …</div><div id="studio-root" hidden><svg aria-hidden="true" class="icon-defs" xmlns="http://www.w3.org/2000/svg">
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6L12 3ZM20 2v4m-2-2h4"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
@@ -26,9 +27,14 @@
       <a class="brand" data-view="studio" href="#studio" aria-label="GRVKN Studio Start"><img id="grvkn-logo" class="brand-logo" src="/studio/assets/grvkn-mark.svg" width="44" height="44" alt=""><span class="brand-copy"><strong>GRVKN</strong><small>STUDIO</small></span></a>
       <div class="nav-kicker">DEIN KREATIVRAUM</div>
       <nav id="navigation">
+        <button class="nav-item" data-view="overview" title="Studio-Übersicht"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Studio-Übersicht</button>
         <button class="nav-item active" data-view="studio"><svg class="icon"><use href="#i-spark"/></svg>Video erstellen<span class="nav-dot"></span></button>
         <button class="nav-item" data-view="upload"><svg class="icon"><use href="#i-upload"/></svg>Video hochladen</button>
-        <button class="nav-item" data-view="projects"><svg class="icon"><use href="#i-grid"/></svg>Meine Entwürfe<span id="project-count" class="nav-count">0</span></button>
+        <button class="nav-item" data-view="projects"><svg class="icon"><use href="#i-grid"/></svg>Meine Projekte<span id="project-count" class="nav-count">0</span></button>
+        <button class="nav-item" data-view="campaigns" title="Monatskampagnen"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Monatskampagnen</button>
+        <button class="nav-item" data-view="quota" title="Generierungskontingent"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg>Generierungskontingent</button>
+        <button class="nav-item" data-view="subscription" title="Studio-Abonnement"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Studio-Abonnement</button>
+        <button class="nav-item" data-view="founder" data-founder-only title="Founder Demo Mode" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Founder Demo Mode</button>
         <button class="nav-item" data-view="sharing"><svg class="icon"><use href="#i-qr"/></svg>Link & QR</button>
         <button class="nav-item" data-view="settings"><svg class="icon"><use href="#i-lock"/></svg>Mein Studio</button>
         <button class="nav-item" data-view="concept"><svg class="icon"><use href="#i-info"/></svg>So funktioniert’s</button>
