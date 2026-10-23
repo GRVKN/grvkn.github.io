@@ -1,6 +1,7 @@
 import { AI_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, projectManifest, selectRecorderMime } from './core.js';
 import { cloud, api, connectWorkspace, uploadImage, restoreImage } from './cloud.js';
 import { companyView, storyboardView, exportView, settingsView } from './views.js';
+import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel} from './workflow-ui.js';
 import { ProductionMedia } from './media.js';
 import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
@@ -13,7 +14,7 @@ const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}
 const STORAGE_KEY = 'grvkn-studio-projects-v1:' + studioOwner();
 let projects = [];
 try { const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); if (Array.isArray(items)) projects = items.slice(0, 30).map(safeProject); } catch {}
-const newProviderProject = () => Object.assign(createProject(), { company: account.business.name, companyId: `${account.provider.business_id}_${account.user.id}`, providerType: account.provider.provider_type, city: account.locations[0]?.city || '', website: account.business.website_url || '', facts: account.business.description || '' });
+const newProviderProject = () => Object.assign(createProject(), { company: account.business.name, companyId: `${account.provider.business_id}_${account.user.id}`, providerType: account.provider.provider_type, city: account.locations[0]?.city || '', website: cloud.status?.security?.website?.url || account.business.website_url || '', facts: account.business.description || '' });
 let project = newProviderProject();
 let view = 'studio';
 let step = 1;
@@ -30,6 +31,7 @@ let player = { playing: false, time: 0, last: 0 };
 let toastTimer;
 let busy = '';
 let candidates = [];
+let websiteChallenge=null;
 let productionJob = null;
 let productionMode = 'video';
 let productionVoice = true;
@@ -47,8 +49,12 @@ let exportRunning = false;
 const fallback = exampleProject();
 const fallbackScenes = buildStoryboard(fallback);
 
+function workflowContext(){return {run:fn=>runTask('workflow',fn),project:()=>project,job:()=>productionJob,open:openProject,save:()=>saveCloudProject(false),download,toast,useFilm:(blob,renderId)=>{setPublicationFile(blob,'studio',true);publishing.renderId=renderId;step=4;view='studio';toast('Gespeicherten Film übernommen. Ergänze die Angaben für die Moderation.');}};}
+
 function pilotState() {
-  return { project, cloud, assets, logo, expandedScene, busy, candidates, job: productionJob,
+  const finalOutput=workflowState.production?.renders?.[0];
+  const finalReady=finalOutput?.status==='ready'&&finalOutput.project_id===project.id&&['scenes','color','musicEnabled','logoId'].every(k=>JSON.stringify(finalOutput.snapshot[k])===JSON.stringify(project[k]));
+  return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,job: productionJob,finalOutput,finalReady,
     productionMode, voice: productionVoice, costConsent, mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
 }
 function activeProduction() { return Boolean(productionJob && ['reserving', 'queued', 'processing', 'needs_review'].includes(productionJob.status)); }
@@ -78,7 +84,7 @@ function upsert(list, value) { const index = list.findIndex(item => item.id === 
 async function saveCompany() {
   if (!cloud.ready || project.demoOnly) return;
   const { company } = await api('/api/companies', { method: 'POST', body: {
-    ...(project.companyId ? { id: project.companyId } : {}), name: project.company, city: project.city,
+    ...(project.companyId ? { id: project.companyId } : {}),projectId:project.id,name: project.company, city: project.city,
     website: project.website, facts: project.facts, confirmed: project.confirmed, providerType: project.providerType,
   } });
   project.companyId = company.id; upsert(cloud.companies, company);
@@ -93,19 +99,18 @@ async function saveCloudProject(announce) {
   project.assetIds = assets.map(asset => asset.id); project.logoId = logo?.id || '';
   const { project: saved } = await api('/api/projects', { method: 'PUT', body: safeProject(project) });
   project = safeProject(saved); upsert(cloud.projects, saved); projects = cloud.projects.map(safeProject);
+  if(project.aiRightsConfirmed&&cloud.status?.backendReady)await api('/api/rights/consent',{method:'POST',body:{projectId:project.id,accepted:true}});
   if (announce) toast('Projekt gespeichert – inklusive Fotos und Logo. Dein Studio merkt sich den Betrieb.');
 }
 async function researchCompany() {
   if (!project.company.trim() || !project.city.trim()) throw new Error('Bitte ergänze den Unternehmensnamen und Ort.');
-  project.website = normalizeWebsite(project.website); await saveCompany();
+  if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
+  project.website = normalizeWebsite(project.website);await saveCloudProject(false);
   const company = cloud.companies.find(item => item.id === project.companyId);
   if (!project.website) {
-    const result = await api('/api/discover', { method: 'POST', body: company, billable: true });
-    candidates = result.candidates;
-    if (!candidates.length) toast('Keine belegte Homepage gefunden. Bitte trage die Website selbst ein.');
-    return;
+    throw new Error('Bitte trage zuerst deine Website ein und bestätige die Domain.');
   }
-  const result = await api('/api/research', { method: 'POST', body: company, billable: true });
+  const result = await api('/api/research', { method: 'POST', body: {...company,projectId:project.id,rightsAccepted:project.aiRightsConfirmed}, billable: true });
   upsert(cloud.companies, result.company); applyCompany(result.company); project.scenes = []; project.source = 'studio-ai-demo';
   candidates = []; invalidate();
   toast('Homepage recherchiert. Prüfe die Quellen und bestätige die Unternehmensangaben.');
@@ -133,6 +138,7 @@ async function openProject(projectId) {
     if (result.job.status !== 'ready') project = safeProject(result.job.snapshot);
     await loadProduction(result.job);
   }
+  await loadProductionOutput(project.id);
   step = productionJob ? 4 : project.scenes.length ? 3 : project.confirmed ? 2 : 1;
   view = 'studio'; player.time = 0; render();
   toast('Projekt mit gespeichertem Material geöffnet.');
@@ -147,7 +153,8 @@ async function watchProduction() {
       if (generation !== watchSequence || productionJob?.id !== jobId) return;
       await loadProduction(job); render();
       if (!['queued', 'processing'].includes(job.status)) {
-        if (job.status === 'ready') toast('Euer Film ist vorbereitet. Prüfe die Vorschau und lade das Video herunter.');
+        cloud.status=await api('/api/status');render();
+        if (job.status === 'ready') {if(cloud.status.production?.configured){await api('/api/renders',{method:'POST',body:{projectId:project.id,jobId:job.id}});await loadProductionOutput(project.id);render();}toast('Die Filmszenen sind gespeichert. Der MP4-Schnitt kann jetzt vorbereitet werden.');}
         return;
       }
     } catch (error) { if (generation === watchSequence) { toast(error.message); render(); } return; }
@@ -155,7 +162,21 @@ async function watchProduction() {
   }
 }
 async function pilotAction(action, button) {
-  if (!['research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
+  if (!['website-begin','website-dns','website-file','founder-demo-create','billing-checkout','research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
+  if(action==='website-begin'){
+    const website=$('#website-proof-url')?.value;
+    await runTask('verify',async()=>{const result=await api('/api/websites',{method:'POST',body:{website}});websiteChallenge=result.challenge;project.website=result.website.url;project.aiRightsConfirmed=false;cloud.status=await api('/api/status');toast('Nachweis angelegt. Bitte DNS-TXT oder HTTPS-Datei setzen.');});return true;
+  }
+  if(action==='website-dns'||action==='website-file'){
+    await runTask('verify',async()=>{await api('/api/websites/verify',{method:'POST',body:{method:action==='website-dns'?'dns_txt':'https_file'}});websiteChallenge=null;cloud.status=await api('/api/status');toast('Genau diese Unternehmenswebsite wurde bestätigt.');});return true;
+  }
+  if(action==='founder-demo-create'){
+    const input={website:$('#founder-website')?.value,company:$('#founder-company')?.value,city:$('#founder-city')?.value,focus:$('#founder-focus')?.value,rightsAccepted:$('#founder-rights')?.checked===true};
+    await runTask('demo',async()=>{const result=await api('/api/founder/demo',{method:'POST',body:input});resetAssets();project=safeProject(result.project);upsert(cloud.companies,result.company);upsert(cloud.projects,result.project);projects=cloud.projects.map(safeProject);step=1;view='studio';toast('Private Founder-Demo vorbereitet. Bitte eigene autorisierte Fotos ergänzen.');});return true;
+  }
+  if(action==='billing-checkout'){
+    const plan=$('#studio-plan')?.value;await runTask('billing',async()=>{const result=await api('/api/billing/checkout',{method:'POST',body:{plan}});if(new URL(result.url).origin!=='https://checkout.stripe.com')throw new Error('Ungültiger Zahlungslink.');location.assign(result.url);});return true;
+  }
   if (action === 'production-mode') { if (!activeProduction()) { productionMode = button.dataset.mode; costConsent = false; render(); } return true; }
   if (action === 'research-live' || action === 'select-website') {
     if (action === 'select-website') {
@@ -169,9 +190,10 @@ async function pilotAction(action, button) {
     projects = cloud.projects.map(safeProject); toast('Dein Studiospeicher und Verbindungsstatus sind aktuell.');
   });
   if (action === 'generate-ai') await runTask('storyboard', async () => {
+    if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
     if (!project.confirmed || !project.focus.trim()) throw new Error('Bitte bestätige den Betrieb und ergänze deinen Videowunsch.');
     await saveCloudProject(false);
-    const result = await api('/api/storyboard', { method: 'POST', body: safeProject(project), billable: true });
+    const result = await api('/api/storyboard', { method: 'POST', body: {...safeProject(project),rightsAccepted:true}, billable: true });
     project = safeProject(result.project); upsert(cloud.projects, result.project); projects = cloud.projects.map(safeProject);
     expandedScene = 0; step = 3; player.time = 0; pausePlayer();
     productionJob = null; mediaReady = false; costConsent = false;
@@ -181,9 +203,11 @@ async function pilotAction(action, button) {
     const ok = await runTask('production', async () => {
       if (!costConsent) throw new Error('Bitte bestätige die angezeigten Produktionskosten.');
       if (!assets.length) throw new Error('Bitte ergänze mindestens ein eigenes Foto.');
+      if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
       await saveCloudProject(false);
-      const job = await api('/api/jobs', { method: 'POST', body: { projectId: project.id, mode: productionMode, voice: productionVoice, consent: true }, billable: true });
+      const job = await api('/api/jobs', { method: 'POST', body: { projectId: project.id, mode: productionMode, voice: productionVoice, consent: true,rightsAccepted:true }, billable: true });
       productionJob = job; upsert(cloud.jobs, job); mediaReady = false; costConsent = false;
+      cloud.status=await api('/api/status');
     });
     if (ok) void watchProduction();
   }
@@ -226,6 +250,7 @@ async function saveProject(announce = true) {
   projects = projects.slice(0, 30);
   const saved = persist();
   $('#project-count').textContent = projects.length;
+  document.querySelectorAll('[data-founder-only]').forEach(el=>{el.hidden=cloud.status?.security?.founder!==true;});
   if (announce && saved) toast('Entwurf gespeichert. Fotos und Logo bleiben nur in dieser Sitzung.');
 }
 
@@ -255,17 +280,18 @@ function briefingEditor() {
     <label class="field"><span>Passender Bereich auf GRVKN</span><select data-field="category" name="category">${optionList(CATEGORIES, project.category)}</select></label><label class="field"><span>Länge</span><select data-field="duration" name="duration">${[15,20,30].map(seconds => `<option value="${seconds}"${project.duration === seconds ? ' selected' : ''}>${seconds} Sekunden</option>`).join('')}</select></label>
     <label class="field"><span>Stimmung</span><select data-field="style" name="style">${optionList(['Warm & nahbar', 'Klar & modern', 'Dynamisch & direkt'], project.style)}</select></label>${field('cta','Was sollen Zuschauer danach tun?','z. B. Kontakt aufnehmen')}</div>
     <div class="visual-upload">${icon('image')}<div><strong>Eure Geschichte. Eure echten Bilder.</strong><p>Bis zu 4 Fotos · JPG, PNG, WebP · je 10 MB</p></div><button class="button secondary small" data-action="pick-images">Fotos wählen ${icon('plus')}</button></div>
+    ${cloud.status?.backendReady&&!project.demoOnly&&assets.length<4?'<button class="button secondary" data-action="website-images">Autorisierte Webseitenbilder übernehmen</button>':''}
     ${assets.length ? `<div class="images-row">${assets.map((asset, i) => `<div class="image-tile"><img src="${esc(asset.url)}" alt="Unternehmensfoto ${i + 1}"><button data-action="remove-image" data-index="${i}" aria-label="Foto ${i + 1} entfernen">${icon('x')}</button></div>`).join('')}</div>` : ''}
     <div class="brand-row"><label for="brand-color">Deine Markenfarbe</label><input id="brand-color" data-field="color" type="color" value="${esc(project.color)}">${logo ? `<img src="${esc(logo.url)}" alt="Unternehmenslogo"><button class="button secondary small" data-action="remove-logo">Logo entfernen</button>` : '<button class="button secondary small" data-action="pick-logo">Logo hinzufügen</button>'}</div>
     <p class="server-note">${cloud.status?.connections.openai && !project.demoOnly ? 'Die KI verwendet deine bestätigten Angaben und wertet die gewählten Fotos aus. Diese Aktion nutzt dein OpenAI-Kontingent. Fotos werden für das Video auf 9:16 zugeschnitten.' : 'Das KI-Paket ist für diesen Anbieter noch nicht aktiv. Die Vorlage ist ein kostenloser Layout-Test.'}</p><div class="editor-actions"><button class="button quiet" data-action="step" data-step="1">Zurück</button>${cloud.status?.connections.openai && !project.demoOnly ? `<button class="button primary" data-action="generate-ai"${busy ? ' disabled' : ''}>${busy === 'storyboard' ? '<span class="busy-indicator"></span>KI plant eure Szenen …' : 'Mit KI planen' + icon('spark')}</button>` : `<button class="button primary" data-action="generate-storyboard">Vorlage testen ${icon('spark')}</button>`}</div></div>`;
 }
 
 function storyboardEditor() {
-  return storyboardView(pilotState());
+  return storyboardView(pilotState()) + productionPanel(pilotState());
 }
 
 function studioExportEditor() {
-  return exportView(pilotState()) + (!project.demoOnly && assets.length ? publicationMarkup(Boolean(publishing.blob && publishing.mode === 'studio')) : '');
+  return exportView(pilotState()) + productionPanel(pilotState()) + (!project.demoOnly && !project.founderDemo && assets.length ? publicationMarkup(Boolean(publishing.blob && publishing.mode === 'studio')) : '');
 }
 
 function uploadEditor() {
@@ -294,6 +320,11 @@ function conceptMarkup() {
 
 function render() {
   const meta = {
+    overview:['Studio-Übersicht','DEIN GRVKN STUDIO','Deine Region. Dein nächster Film.','Projekte, Monatsplanung und Freigaben an einem Ort.'],
+    campaigns:['Monatskampagnen','EINMAL PLANEN','Deine Angebote. Woche für Woche.','Du bestätigst die Inhalte. Das Studio bereitet die nächsten Wochen vor.'],
+    quota:['Generierungskontingent','VERBRAUCH IM BLICK','Bewusst produzieren.','Kontingent und API-Kosten für deinen Anbieterzugang.'],
+    subscription:['Studio-Abonnement','DEIN KI-PAKET','Dein Studio-Tarif.','Unabhängig von GRVKN Business und deinem normalen Video-Upload.'],
+    founder:['Founder Demo Mode','AUTORISIERTE INTERNE DEMOS','Dein privater Vorführraum.','Externe Webseiten nur mit Autorisierung. Demos bleiben privat.'],
     studio: ['Video erstellen', 'VON DER IDEE ZUM AUFTRITT', 'Deine Region. Dein Video.', 'Zeig, was euch ausmacht. Dein Studio macht euch sichtbar.'],
     upload: ['Video hochladen', 'DEIN VIDEO AUF GRVKN', 'Zeig, was bei dir passiert.', 'Dein Video bekommt die passende Kennzeichnung. Ganz automatisch.'],
     projects: ['Meine Entwürfe', 'DEIN KREATIVER VORRAT', 'Ideen, die bleiben.', 'Hier findest du deine gespeicherten Storyboards und Entwürfe.'],
@@ -308,12 +339,15 @@ function render() {
   $('#load-example').hidden = view !== 'studio';
   document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === view));
   $('#project-count').textContent = projects.length;
+  document.querySelectorAll('[data-founder-only]').forEach(el=>{el.hidden=cloud.status?.security?.founder!==true;});
   const workspace = ['studio', 'upload'].includes(view);
   $('#workspace-grid').hidden = !workspace;
   $('#standalone').hidden = workspace;
+  if(workspace)$('#standalone').innerHTML='';else $('#editor').innerHTML='';
   renderStepper();
   if (view === 'studio') $('#editor').innerHTML = [companyEditor, briefingEditor, storyboardEditor, studioExportEditor][step - 1]();
   if (view === 'upload') $('#editor').innerHTML = uploadEditor();
+  if(['overview','campaigns','quota','subscription','founder'].includes(view))$('#standalone').innerHTML=workflowView(view,pilotState());
   if (view === 'projects') $('#standalone').innerHTML = renderProjects();
   if (view === 'concept') $('#standalone').innerHTML = conceptMarkup();
   if (view === 'settings') $('#standalone').innerHTML = settingsView(pilotState());
@@ -345,6 +379,7 @@ function navigate(nextView) {
   exportState = null;
   player.time = 0;
   render();
+  if(['overview','campaigns','quota','subscription'].includes(view)&&cloud.status?.backendReady)void loadWorkflows(project.id).then(()=>render());
 }
 
 function goStep(nextStep) {
@@ -378,6 +413,9 @@ document.addEventListener('click', async event => {
   if (exportRunning) return toast('Der Export läuft. Änderungen sind danach wieder möglich.');
   const action = button.dataset.action;
   if (busy) return toast('Deine Aktion läuft noch.');
+  if(action==='export-studio'&&cloud.status?.production?.configured&&project.source==='ai_assisted'&&(productionJob?.status==='ready'||workflowState.production?.renders?.length)){await workflowAction({dataset:{action:'wf-download'}},workflowContext());return;}
+  if(action.startsWith('wf-')){try{await workflowAction(button,workflowContext());}catch(error){toast(error.message);}return;}
+  if(action==='website-images'){await runTask('images',async()=>{if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Materialrechte.');await saveCloudProject(false);const result=await api('/api/websites/import',{method:'POST',body:{projectId:project.id,rightsAccepted:true},billable:true});await openProject(result.project.id);step=2;toast('Webseitenbilder privat gespeichert. Bitte prüfe die Motive.');});return;}
   if (await pilotAction(action, button)) return;
   if (['copy-ad-link', 'share-ad-link', 'download-qr-png', 'download-qr-svg', 'save-ad-reference'].includes(action)) {
     try {
@@ -430,7 +468,7 @@ document.addEventListener('click', async event => {
     download(new Blob([JSON.stringify(projectManifest(project, productionJob), null, 2)], { type: 'application/json' }), safeFilename(project.company) + '-storyboard.json');
     toast('Storyboard heruntergeladen. Fotos und Logo sind nicht in der JSON-Datei enthalten.');
   }
-  if (action === 'new-project') { resetAssets(); project = newProviderProject(); if (cloud.companies[0]) applyCompany(cloud.companies[0]); step = 1; researchShown = false; navigate('studio'); }
+  if (action === 'new-project') { workflowState.production=null;resetAssets(); project = newProviderProject(); {const ownCompany=cloud.companies.find(c=>c.id===`${account.provider.business_id}_${account.user.id}`);if(ownCompany)applyCompany(ownCompany);} step = 1; researchShown = false; navigate('studio'); }
   if (action === 'load-project') {
     const found = projects.find(item => item.id === button.dataset.id);
     if (!found) return;
@@ -490,13 +528,18 @@ document.addEventListener('input', event => {
   }
 });
 
-document.addEventListener('change', event => {
+document.addEventListener('change', async event => {
+  if(event.target.id==='ai-rights-confirmed'){
+    project.aiRightsConfirmed=event.target.checked;
+    if(!project.aiRightsConfirmed&&cloud.status?.backendReady&&cloud.projects.some(p=>p.id===project.id))try{await api('/api/rights/consent',{method:'POST',body:{projectId:project.id,accepted:false}});}catch(error){toast(error.message);}
+  }
   if (event.target.id === 'company-confirmed') project.confirmed = event.target.checked;
   if (event.target.id === 'studio-approved') {
     project.approved = event.target.checked; project.status = project.approved ? 'Geprüft' : 'Entwurf';
     render();
   }
   if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject(); if (selected) applyCompany(selected); step = 1; render(); }
+  if(event.target.id==='production-music'){project.musicEnabled=event.target.checked;project.approved=false;resetPublicationFile();render();}
   if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; render(); }
   if (event.target.id === 'cost-consent') { costConsent = event.target.checked; render(); }
   if (event.target.id === 'upload-ai') { uploadContainsAi = event.target.checked; uploadApproved = false; exportState = null; render(); }
@@ -738,7 +781,7 @@ function paint() {
   if (markLoaded) ctx.drawImage(grvknLogo, 49, 1168, 46, 46);
   const brandX = markLoaded ? 108 : 49;
   ctx.font = '700 18px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('GRVKN', brandX, 1187);
-  ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.fillText('DEINE REGION. IN EINEM FEED.', brandX, 1214);
+  ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.fillText('Erstellt mit GRVKN Studio', brandX, 1214);
   ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.textAlign = 'right'; ctx.fillText('0' + (current.index + 1) + ' / 04', 669, 1200); ctx.textAlign = 'left';
   if (activeLabel()) drawAiLabel();
 }
@@ -869,6 +912,7 @@ void connectWorkspace().then(() => {
   if (cloud.ready) {
     projects = cloud.projects.map(safeProject);
     if (!project.scenes.length) { const saved = cloud.companies.find(company => company.id === project.companyId); if (saved) applyCompany(saved); }
+    if(!project.website&&cloud.status?.security?.website?.status==='verified')project.website=cloud.status.security.website.url;
     if (!cloud.status.connections.runway) productionMode = 'photos';
   }
   render();
@@ -881,6 +925,7 @@ function chooseOwnAd(value) {
 }
 document.addEventListener('input', event => { if (event.target.dataset.publish) readPublicationInputs(); });
 document.addEventListener('change', event => {
+  if(event.target.id==='wf-month'){workflowState.month=event.target.value;render();}
   if (event.target.dataset.publish === 'contentType') { readPublicationInputs(); render(); }
   if (event.target.id === 'own-ad') chooseOwnAd(event.target.value);
   if (event.target.id === 'upload-ai' || event.target.id === 'upload-approved') {
@@ -907,3 +952,12 @@ document.addEventListener('click', async event => {
 const requestedAd = new URL(location.href).searchParams.get('ad');
 if (requestedAd) { try { prepareReplacement(requestedAd); project.grvknAdId = requestedAd; navigate('upload'); } catch (error) { toast(error.message); } }
 
+
+// Private preview links never approve or publish through a GET request.
+publishing.beforeSubmit=async ticket=>{
+ if(publishing.mode!=='studio'||!cloud.status?.production?.configured)return;
+ const output=await api('/api/production/'+project.id),slot=output.slot;
+ if(slot?.id)await api('/api/campaigns/slots/'+slot.id+'/submission',{method:'POST',body:{ad:publishing.replacement||ticket.id,render:publishing.renderId||null}});
+};
+const reviewToken=new URLSearchParams(location.hash.replace(/^#/,'' )).get('review');
+if(reviewToken){history.replaceState(null,'',location.pathname+location.search);void (async()=>{await new Promise(resolve=>{const check=()=>cloud.ready||cloud.error?resolve():setTimeout(check,100);check();});try{const result=await api('/api/reviews/resolve',{method:'POST',body:{token:reviewToken}});await openProject(result.slot.project_id);}catch(error){toast(error.message);navigate('campaigns');}})();}

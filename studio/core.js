@@ -2,6 +2,7 @@ import { normalizeAdId, publicAdLink, providerType } from './grvkn.js';
 export const AI_LABEL = 'Mit KI generiert';
 export const CATEGORIES = ['Handwerk', 'Dienstleister', 'Gastronomie', 'Veranstaltungen/Kultur', 'Shopping', 'Auto/Mobilität', 'Stellenanzeigen', 'Azubi', 'Pflege/Soziales', 'Immobilien', 'Vereine/Sport', 'Bildung', 'Freizeit', 'Tourismus'];
 export const GOALS = ['Unternehmen vorstellen', 'Angebot zeigen', 'Stellenanzeige', 'Azubi gesucht', 'Veranstaltung'];
+export const runwaySceneSeconds=seconds=>Number(seconds)<=5?5:10;
 
 export function needsAiLabel({ declaredContainsAi = false, provenance = 'uploaded', aiComponents = [] } = {}) {
   return declaredContainsAi === true || ['ai_generated', 'ai_assisted', 'studio-ai-demo'].includes(provenance) || aiComponents.length > 0;
@@ -28,9 +29,9 @@ export function createProject() {
     id: globalThis.crypto?.randomUUID?.() ?? 'project-' + Date.now(),
     name: '', company: '', city: '', website: '', facts: '', confirmed: false,
     goal: 'Unternehmen vorstellen', category: 'Handwerk', focus: '', cta: 'Entdecke uns auf GRVKN',
-    duration: 20, style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
+    duration: 20, musicEnabled: true, websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
     updatedAt: new Date().toISOString(), status: 'Entwurf', source: 'studio-ai-demo',
-    companyId: '', assetIds: [], logoId: '', demoOnly: false, providerType: 'business', grvknAdId: ''
+    companyId: '', assetIds: [], logoId: '', demoOnly: false, founderDemo:false,aiRightsConfirmed:false,providerType: 'business', grvknAdId: ''
   };
 }
 
@@ -88,11 +89,15 @@ export function safeProject(input) {
   clean.color = /^#[0-9a-f]{6}$/i.test(clean.color) ? clean.color : '#B7FF3C';
   clean.confirmed = input.confirmed === true;
   clean.approved = input.approved === true;
+  clean.musicEnabled = input.musicEnabled !== false;
+  clean.websiteImageSources = Array.isArray(input.websiteImageSources) ? input.websiteImageSources.slice(0,4).map(x=>({url:String(x.url||'').slice(0,1000),source:String(x.source||'').slice(0,1000),name:String(x.name||'').slice(0,100)})) : [];
   clean.source = input.source === 'ai_assisted' ? 'ai_assisted' : 'studio-ai-demo';
   clean.companyId = typeof input.companyId === 'string' ? input.companyId.slice(0, 120) : '';
   clean.assetIds = Array.isArray(input.assetIds) ? input.assetIds.filter(value => typeof value === 'string').slice(0, 4) : [];
   clean.logoId = typeof input.logoId === 'string' ? input.logoId.slice(0, 120) : '';
   clean.demoOnly = input.demoOnly === true;
+  clean.founderDemo=input.founderDemo===true;
+  clean.aiRightsConfirmed=input.aiRightsConfirmed===true;
   clean.providerType = providerType(input.providerType);
   clean.grvknAdId = normalizeAdId(input.grvknAdId);
   clean.scenes = Array.isArray(input.scenes) ? input.scenes.slice(0, 4).map((scene, i) => ({ id: i + 1,
