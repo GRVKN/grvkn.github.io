@@ -1,7 +1,7 @@
 import { AI_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, projectManifest, selectRecorderMime } from './core.js';
 import { cloud, api, connectWorkspace, uploadImage, restoreImage } from './cloud.js';
 import { companyView, storyboardView, exportView, settingsView } from './views.js';
-import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel,matchingOutput} from './workflow-ui.js';
+import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel,matchingOutput,matchingFailedDraft} from './workflow-ui.js';
 import { ProductionMedia } from './media.js';
 import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
@@ -138,8 +138,8 @@ async function openProject(projectId) {
   assets = await Promise.all(images.map(restoreImage));
   const companyLogo = result.assets.find(asset => asset.id === project.logoId);
   if (companyLogo) logo = await restoreImage(companyLogo);
-  if (result.job && (matchesProduction(project, result.job.snapshot) || ['queued', 'processing', 'needs_review', 'reserving'].includes(result.job.status))) {
-    if (result.job.status !== 'ready') project = safeProject(result.job.snapshot);
+  if (result.job && (matchesProduction(project, result.job.snapshot) || matchingFailedDraft(project,result.job) || ['queued', 'processing', 'needs_review', 'reserving'].includes(result.job.status))) {
+    if (!['ready','failed'].includes(result.job.status)) project = safeProject(result.job.snapshot);
     await loadProduction(result.job);
   }
   await loadProductionOutput(project.id);
