@@ -53,7 +53,7 @@ export function exportView(s) {
   const live=p.source==='ai_assisted'&&cloud.ready&&!p.demoOnly,generated=p.visualSource==='generated';
   const active=job&&['reserving','queued','processing','needs_review'].includes(job.status);
   const finished=job?.status==='ready'&&mediaReady,cutAvailable=cloud.status?.production?.workerOnline===true;
-  const quote=s.productionEstimate?.estimate||productionQuote(p,mode,voice);
+  const quote=s.productionEstimate?.estimate||(active&&job.estimate)||productionQuote(p,mode,voice);
   const capacity=s.productionEstimate?.capacity;
   const planReady=!generated||Boolean(p.visualBible&&p.requirements?.length&&p.scenes.every(x=>x.imagePrompt));
   const allowed=live&&cutAvailable&&cloud.status?.aiAllowed&&p.aiRightsConfirmed&&p.approved&&(generated?planReady&&mode==='video':assets.length>0)&&costConsent&&capacity?.allowed&&!busy&&!active&&(mode==='photos'||cloud.status?.connections.runway)&&(!voice||cloud.status?.connections.openai);
