@@ -1,7 +1,11 @@
 {
-  "sourceRepository": "GRVKN/grvkn-app",
-  "sourceCommit": "1e74a52e72fce54e1ea498c028f2da67d8ce4544",
-  "backendFunction": "grvkn-studio",
-  "backendUrl": "https://mdhuljyjrcrktyzfugzv.supabase.co/functions/v1/grvkn-studio",
-  "persistentMp4RequiresWorker": true
+  "release": "studio-wunschtext-20261024",
+  "sourceCommit": "78f65df010dd934031fe03fa3fea2cf6776b8ad0",
+  "features": [
+    "video_from_wish_text",
+    "generated_scene_references",
+    "scene_correction",
+    "production_budget_review",
+    "reviewed_mp4_download"
+  ]
 }
