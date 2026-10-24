@@ -1,13 +1,1 @@
-{
-  "release": "studio-wunschtext-repair-20261024",
-  "sourceCommit": "887019f44e49db630e5f7fedfd04bc3ae88acce8",
-  "features": [
-    "video_from_wish_text",
-    "generated_scene_references",
-    "scene_correction",
-    "production_budget_review",
-    "reviewed_mp4_download",
-    "recover_paid_scenes",
-    "repair_failed_scenes"
-  ]
-}
+{"release": "studio-reopen-repair-20261024", "sourceCommit": "25104f9b111eb72e0ebb40d593843a015b186daf"}

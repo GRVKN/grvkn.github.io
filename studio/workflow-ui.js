@@ -2,6 +2,9 @@ import {escapeHtml as esc} from './core.js';
 import {api} from './cloud.js';
 import {studioSecurityView} from './security-view.js';
 export const workflowState={campaigns:[],slots:[],costs:null,production:null,error:'',reviewedRender:'',month:new Date().toISOString().slice(0,7)};
+export function matchingFailedDraft(project,job){
+ return job?.status==='failed'&&['id','company','website','duration','visualSource','visualBible','assetIds'].every(k=>JSON.stringify(project[k])===JSON.stringify(job.snapshot?.[k]));
+}
 export function matchingOutput(project,render,jobId=''){
  return Boolean(render?.status==='ready'&&render.project_id===project.id&&(!jobId||render.job_id===jobId)&&['id','company','website','duration','assetIds','visualSource','visualBible','color','musicEnabled','logoId','scenes'].every(k=>JSON.stringify(render.snapshot[k])===JSON.stringify(project[k])));
 }
