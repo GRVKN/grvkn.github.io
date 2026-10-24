@@ -125,7 +125,7 @@ function matchesProduction(p, snapshot) {
 }
 async function loadProduction(job) {
   productionJob = job; productionMode=job.mode;productionVoice=job.voice;upsert(cloud.jobs, job); mediaReady = false;
-  if(job.status==='ready')retryBaseJob=job;
+  if(['ready','failed'].includes(job.status))retryBaseJob=job;
   if (job.status === 'ready' && matchesProduction(project, job.snapshot)) {
     await realMedia.load(job); mediaReady = true; player.time = 0; paint();
   }
@@ -184,7 +184,7 @@ async function pilotAction(action, button) {
     productionMode='video';retryBaseJob=null;retryScene=null;invalidate();render();return true;
   }
   if(action==='correct-scene'){
-    if(!productionJob||productionJob.status!=='ready')return true;
+    if(!productionJob||!['ready','failed'].includes(productionJob.status))return true;
     retryBaseJob=productionJob;retryScene=Number(button.dataset.index);productionEstimate=null;costConsent=false;project.approved=false;expandedScene=retryScene;step=3;render();return true;
   }
   if(action==='full-production'){retryScene=null;productionEstimate=null;costConsent=false;productionJob=null;mediaReady=false;realMedia.reset();render();return true;}
@@ -246,7 +246,9 @@ async function pilotAction(action, button) {
   }
   if (action === 'resume-production') {
     const ok = await runTask('status', async () => {
-      const job = await api('/api/jobs/' + productionJob.id);
+      const job = productionJob.status==='failed'&&productionJob.recoverable
+        ? await api('/api/jobs/'+productionJob.id+'/advance',{method:'POST',body:{}})
+        : await api('/api/jobs/' + productionJob.id);
       await loadProduction(job);
       if (job.status === 'needs_review') toast('Im Runway- bzw. OpenAI-Konto prüfen. Unklare Aufträge werden nicht erneut gestartet.');
     });
