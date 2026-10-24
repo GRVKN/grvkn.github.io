@@ -6,7 +6,7 @@ import { ProductionMedia } from './media.js';
 import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
 import { account, studioOwner } from './client.js';
-import { publishing, publicationMarkup, publishCurrent, setPublicationFile, resetPublicationFile, readPublicationInputs, prepareReplacement } from './publisher.js';
+import { publishing, publicationMarkup, studioPublicationMarkup, publishCurrent, setPublicationFile, resetPublicationFile, readPublicationInputs, prepareReplacement } from './publisher.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = escapeHtml;
@@ -336,7 +336,7 @@ function storyboardEditor() {
 }
 
 function studioExportEditor() {
-  return exportView(pilotState()) + productionPanel(pilotState()) + (!project.demoOnly && !project.founderDemo && assets.length ? publicationMarkup(Boolean(publishing.blob && publishing.mode === 'studio')) : '');
+  return exportView(pilotState()) + productionPanel(pilotState()) + studioPublicationMarkup(project);
 }
 
 function uploadEditor() {

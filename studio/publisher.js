@@ -4,6 +4,10 @@ import { escapeHtml as esc } from './core.js';
 export const publishing = { renderId: '', blob: null, mode: '', containsAi: false, ticket: null, complete: '', busy: false, draft: {}, replacement: '' };
 export function setPublicationFile(blob, mode, containsAi) { publishing.renderId = ''; publishing.blob = blob; publishing.mode = mode; publishing.containsAi = containsAi; publishing.ticket = null; publishing.complete = ''; }
 export function resetPublicationFile() { publishing.renderId = ''; publishing.blob = null; publishing.ticket = null; publishing.complete = ''; }
+export function studioPublicationMarkup(project) {
+  if (project.demoOnly || project.founderDemo) return '';
+  return publicationMarkup(Boolean(publishing.blob && publishing.mode === 'studio'));
+}
 export async function reloadAds() { account.ads = unwrap(await account.client.from('ads').select('id,title,description,status,video_url,location_id,category_id,cta_type,cta_url,content_type').eq('business_id', account.provider.business_id).order('created_at', { ascending: false }).limit(100)); }
 export function prepareReplacement(adId) {
   const ad = account.ads.find(item => item.id === adId);
