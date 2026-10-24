@@ -1,7 +1,7 @@
 import { AI_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, projectManifest, selectRecorderMime } from './core.js';
 import { cloud, api, connectWorkspace, uploadImage, restoreImage } from './cloud.js';
 import { companyView, storyboardView, exportView, settingsView } from './views.js';
-import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel} from './workflow-ui.js';
+import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel,matchingOutput} from './workflow-ui.js';
 import { ProductionMedia } from './media.js';
 import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
@@ -36,8 +36,12 @@ let productionJob = null;
 let productionMode = 'video';
 let productionVoice = true;
 let costConsent = false;
+let productionEstimate = null;
+let retryBaseJob = null;
+let retryScene = null;
 let mediaReady = false;
 let watchSequence = 0;
+let cutWatchSequence = 0;
 const realMedia = new ProductionMedia(() => paint());
 const canvas = $('#video-canvas');
 const ctx = canvas.getContext('2d');
@@ -53,9 +57,9 @@ function workflowContext(){return {run:fn=>runTask('workflow',fn),project:()=>pr
 
 function pilotState() {
   const finalOutput=workflowState.production?.renders?.[0];
-  const finalReady=finalOutput?.status==='ready'&&finalOutput.project_id===project.id&&['scenes','color','musicEnabled','logoId'].every(k=>JSON.stringify(finalOutput.snapshot[k])===JSON.stringify(project[k]));
+  const finalReady=matchingOutput(project,finalOutput,productionJob?.id);
   return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,job: productionJob,finalOutput,finalReady,
-    productionMode, voice: productionVoice, costConsent, mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
+    productionMode, voice: productionVoice, costConsent, productionEstimate, retryBaseJob, retryScene, finalReviewed:workflowState.reviewedRender===finalOutput?.id,mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
 }
 function activeProduction() { return Boolean(productionJob && ['reserving', 'queued', 'processing', 'needs_review'].includes(productionJob.status)); }
 function updateConnectionNotice() {
@@ -115,12 +119,13 @@ async function researchCompany() {
   toast('Homepage recherchiert. Prüfe die Quellen und bestätige die Unternehmensangaben.');
 }
 function matchesProduction(p, snapshot) {
-  const keys = ['id', 'company', 'providerType', 'city', 'website', 'facts', 'focus', 'goal', 'cta', 'duration', 'style', 'color', 'logoId', 'assetIds', 'scenes'];
+  const keys = ['id', 'company', 'providerType', 'city', 'website', 'facts', 'focus', 'goal', 'cta', 'duration', 'style', 'color', 'logoId', 'assetIds', 'scenes','visualSource','visualBible'];
   const saved = safeProject(snapshot);
   return keys.every(key => JSON.stringify(p[key]) === JSON.stringify(saved[key]));
 }
 async function loadProduction(job) {
-  productionJob = job; upsert(cloud.jobs, job); mediaReady = false;
+  productionJob = job; productionMode=job.mode;productionVoice=job.voice;upsert(cloud.jobs, job); mediaReady = false;
+  if(job.status==='ready')retryBaseJob=job;
   if (job.status === 'ready' && matchesProduction(project, job.snapshot)) {
     await realMedia.load(job); mediaReady = true; player.time = 0; paint();
   }
@@ -138,11 +143,23 @@ async function openProject(projectId) {
     await loadProduction(result.job);
   }
   await loadProductionOutput(project.id);
+  if(['queued','rendering'].includes(workflowState.production?.renders?.[0]?.status))void watchFinalOutput();
   step = productionJob ? 4 : project.scenes.length ? 3 : project.confirmed ? 2 : 1;
   view = 'studio'; player.time = 0; render();
   toast('Projekt mit gespeichertem Material geöffnet.');
 }
 function stopWatching() { ++watchSequence; }
+async function watchFinalOutput(){
+  const sequence=++cutWatchSequence,projectId=project.id;
+  for(let i=0;i<60&&sequence===cutWatchSequence&&project.id===projectId;i++){
+    await loadProductionOutput(projectId);
+    if(sequence!==cutWatchSequence||project.id!==projectId)return;
+    render();const output=workflowState.production?.renders?.[0];
+    if(output?.status==='ready'){toast('Dein MP4 ist fertig. Prüfe den Film unten mit Ton.');return;}
+    if(output?.status==='failed')return;
+    await new Promise(resolve=>setTimeout(resolve,5000));
+  }
+}
 async function watchProduction() {
   const generation = ++watchSequence, jobId = productionJob?.id;
   if (!jobId || !['queued', 'processing'].includes(productionJob.status)) return;
@@ -153,7 +170,7 @@ async function watchProduction() {
       await loadProduction(job); render();
       if (!['queued', 'processing'].includes(job.status)) {
         cloud.status=await api('/api/status');render();
-        if (job.status === 'ready') {if(cloud.status.production?.configured){await api('/api/renders',{method:'POST',body:{projectId:project.id,jobId:job.id}});await loadProductionOutput(project.id);render();}toast('Die Filmszenen sind gespeichert. Der MP4-Schnitt kann jetzt vorbereitet werden.');}
+        if (job.status === 'ready') {if(cloud.status.production?.configured){await api('/api/renders',{method:'POST',body:{projectId:project.id,jobId:job.id}});await loadProductionOutput(project.id);render();void watchFinalOutput();}toast('Die Filmszenen sind gespeichert. Dein MP4 wird jetzt mit Ton geschnitten.');}
         return;
       }
     } catch (error) { if (generation === watchSequence) { toast(error.message); render(); } return; }
@@ -161,7 +178,23 @@ async function watchProduction() {
   }
 }
 async function pilotAction(action, button) {
-  if (!['website-begin','website-dns','website-file','founder-demo-create','billing-checkout','research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
+  if (!['visual-source','estimate-production','correct-scene','full-production','website-begin','website-dns','website-file','founder-demo-create','billing-checkout','research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
+  if(action==='visual-source'){
+    project.visualSource=button.dataset.source==='photos'?'photos':'generated';project.visualBible='';project.requirements=[];project.scenes=[];
+    productionMode='video';retryBaseJob=null;retryScene=null;invalidate();render();return true;
+  }
+  if(action==='correct-scene'){
+    if(!productionJob||productionJob.status!=='ready')return true;
+    retryBaseJob=productionJob;retryScene=Number(button.dataset.index);productionEstimate=null;costConsent=false;project.approved=false;expandedScene=retryScene;step=3;render();return true;
+  }
+  if(action==='full-production'){retryScene=null;productionEstimate=null;costConsent=false;productionJob=null;mediaReady=false;realMedia.reset();render();return true;}
+  if(action==='estimate-production'){
+    await runTask('estimate',async()=>{
+      await saveCloudProject(false);
+      productionEstimate=await api('/api/estimate',{method:'POST',body:{projectId:project.id,mode:productionMode,voice:productionVoice,rightsAccepted:project.aiRightsConfirmed,...(retryScene!==null?{retryOf:retryBaseJob.id,sceneIndex:retryScene}:{})}});
+      costConsent=false;
+    });return true;
+  }
   if(action==='website-begin'){
     const website=$('#website-proof-url')?.value;
     await runTask('verify',async()=>{const result=await api('/api/websites',{method:'POST',body:{website}});websiteChallenge=result.challenge;project.website=result.website.url;project.aiRightsConfirmed=false;cloud.status=await api('/api/status');toast('Nachweis angelegt. Bitte DNS-TXT oder HTTPS-Datei setzen.');});return true;
@@ -176,7 +209,7 @@ async function pilotAction(action, button) {
   if(action==='billing-checkout'){
     const plan=$('#studio-plan')?.value;await runTask('billing',async()=>{const result=await api('/api/billing/checkout',{method:'POST',body:{plan}});if(new URL(result.url).origin!=='https://checkout.stripe.com')throw new Error('Ungültiger Zahlungslink.');location.assign(result.url);});return true;
   }
-  if (action === 'production-mode') { if (!activeProduction()) { productionMode = button.dataset.mode; costConsent = false; render(); } return true; }
+  if (action === 'production-mode') { if (!activeProduction()) { productionMode = button.dataset.mode; costConsent = false; productionEstimate=null;render(); } return true; }
   if (action === 'research-live' || action === 'select-website') {
     if (action === 'select-website') {
       const candidate = candidates[Number(button.dataset.index)]; if (!candidate) return true;
@@ -191,21 +224,22 @@ async function pilotAction(action, button) {
   if (action === 'generate-ai') await runTask('storyboard', async () => {
     if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
     if (!project.confirmed || !project.focus.trim()) throw new Error('Bitte bestätige den Betrieb und ergänze deinen Videowunsch.');
+    if(project.visualSource==='photos'&&!assets.length)throw new Error('Wähle eigene Fotos oder „Video aus Wunschtext“.');
     await saveCloudProject(false);
     const result = await api('/api/storyboard', { method: 'POST', body: {...safeProject(project),rightsAccepted:true}, billable: true });
     project = safeProject(result.project); upsert(cloud.projects, result.project); projects = cloud.projects.map(safeProject);
     expandedScene = 0; step = 3; player.time = 0; pausePlayer();
-    productionJob = null; mediaReady = false; costConsent = false;
-    toast('Die KI hat eure Geschichte geplant. Prüfe Texte und Fotowahl.');
+    productionJob = null; retryBaseJob=null;retryScene=null;productionEstimate=null;mediaReady = false; costConsent = false;
+    toast('Storyboard geplant. Prüfe Texte, Bildmotive und deine Anforderungen.');
   });
   if (action === 'start-production') {
     const ok = await runTask('production', async () => {
-      if (!costConsent) throw new Error('Bitte bestätige die angezeigten Produktionskosten.');
-      if (!assets.length) throw new Error('Bitte ergänze mindestens ein eigenes Foto.');
+      if (!costConsent||!productionEstimate?.capacity.allowed) throw new Error('Bitte prüfe und bestätige zuerst die gesamten Produktionskosten.');
+      if (project.visualSource==='photos'&&!assets.length) throw new Error('Bitte ergänze mindestens ein eigenes Foto.');
       if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
       await saveCloudProject(false);
-      const job = await api('/api/jobs', { method: 'POST', body: { projectId: project.id, mode: productionMode, voice: productionVoice, consent: true,rightsAccepted:true }, billable: true });
-      productionJob = job; upsert(cloud.jobs, job); mediaReady = false; costConsent = false;
+      const job = await api('/api/jobs', { method: 'POST', body: { projectId: project.id, mode: productionMode, voice: productionVoice, consent: true,rightsAccepted:true,quoteHash:productionEstimate.quoteHash,...(retryScene!==null?{retryOf:retryBaseJob.id,sceneIndex:retryScene}:{}) }, billable: true });
+      productionJob = job; upsert(cloud.jobs, job); mediaReady = false; costConsent = false;productionEstimate=null;retryScene=null;workflowState.reviewedRender='';
       cloud.status=await api('/api/status');
     });
     if (ok) void watchProduction();
@@ -278,11 +312,14 @@ function briefingEditor() {
     <div class="form-grid"><label class="field full"><span>Deine Idee für das Video</span><textarea name="focus" data-field="focus" maxlength="1200" placeholder="Zum Beispiel: Zeige unsere Werkstatt und wie wir Möbel nach Maß fertigen.">${esc(project.focus)}</textarea></label>
     <label class="field"><span>Passender Bereich auf GRVKN</span><select data-field="category" name="category">${optionList(CATEGORIES, project.category)}</select></label><label class="field"><span>Länge</span><select data-field="duration" name="duration">${[15,20,30].map(seconds => `<option value="${seconds}"${project.duration === seconds ? ' selected' : ''}>${seconds} Sekunden</option>`).join('')}</select></label>
     <label class="field"><span>Stimmung</span><select data-field="style" name="style">${optionList(['Warm & nahbar', 'Klar & modern', 'Dynamisch & direkt'], project.style)}</select></label>${field('cta','Was sollen Zuschauer danach tun?','z. B. Kontakt aufnehmen')}</div>
-    <div class="visual-upload">${icon('image')}<div><strong>Eure Geschichte. Eure echten Bilder.</strong><p>Bis zu 4 Fotos · JPG, PNG, WebP · je 10 MB</p></div><button class="button secondary small" data-action="pick-images">Fotos wählen ${icon('plus')}</button></div>
+    <div class="production-modes" aria-label="Bildquelle"><button class="production-mode${project.visualSource==='generated'?' active':''}" data-action="visual-source" data-source="generated"><strong>Video aus Wunschtext</strong><small>Neue Personen, Räume und Motive erzeugen. Keine Fotos nötig.</small></button><button class="production-mode${project.visualSource==='photos'?' active':''}" data-action="visual-source" data-source="photos"><strong>Eure echten Fotos</strong><small>Eigene Bilder oder autorisierte Webseitenbilder verwenden.</small></button></div>
+    ${project.visualSource==='generated'?'<div class="note">Beschreibe Personen, Gegenstände, Umgebung und Handlung konkret. Das Studio erzeugt eine gekennzeichnete KI-Inszenierung. Echte Betriebseinblicke benötigen eigenes Material.</div>':''}
+    ${project.visualSource==='photos'?`<div class="visual-upload">${icon('image')}<div><strong>Eure Geschichte. Eure echten Bilder.</strong><p>Bis zu 4 Fotos · JPG, PNG, WebP · je 10 MB</p></div><button class="button secondary small" data-action="pick-images">Fotos wählen ${icon('plus')}</button></div>
     ${cloud.status?.backendReady&&!project.demoOnly&&assets.length<4?'<button class="button secondary" data-action="website-images">Autorisierte Webseitenbilder übernehmen</button>':''}
     ${assets.length ? `<div class="images-row">${assets.map((asset, i) => `<div class="image-tile"><img src="${esc(asset.url)}" alt="Unternehmensfoto ${i + 1}"><button data-action="remove-image" data-index="${i}" aria-label="Foto ${i + 1} entfernen">${icon('x')}</button></div>`).join('')}</div>` : ''}
+    `:''}
     <div class="brand-row"><label for="brand-color">Deine Markenfarbe</label><input id="brand-color" data-field="color" type="color" value="${esc(project.color)}">${logo ? `<img src="${esc(logo.url)}" alt="Unternehmenslogo"><button class="button secondary small" data-action="remove-logo">Logo entfernen</button>` : '<button class="button secondary small" data-action="pick-logo">Logo hinzufügen</button>'}</div>
-    <p class="server-note">${cloud.status?.connections.openai && !project.demoOnly ? 'Die KI verwendet deine bestätigten Angaben und wertet die gewählten Fotos aus. Diese Aktion nutzt dein OpenAI-Kontingent. Fotos werden für das Video auf 9:16 zugeschnitten.' : 'Das KI-Paket ist für diesen Anbieter noch nicht aktiv. Die Vorlage ist ein kostenloser Layout-Test.'}</p><div class="editor-actions"><button class="button quiet" data-action="step" data-step="1">Zurück</button>${cloud.status?.connections.openai && !project.demoOnly ? `<button class="button primary" data-action="generate-ai"${busy ? ' disabled' : ''}>${busy === 'storyboard' ? '<span class="busy-indicator"></span>KI plant eure Szenen …' : 'Mit KI planen' + icon('spark')}</button>` : `<button class="button primary" data-action="generate-storyboard">Vorlage testen ${icon('spark')}</button>`}</div></div>`;
+    <p class="server-note">${cloud.status?.connections.openai && !project.demoOnly ? 'Die KI plant zunächst Texte und Bildmotive aus deinem Wunsch. Diese Planung erzeugt noch keinen Film. Bilder, Stimme und Schnitt starten nach deiner gesonderten Kostenfreigabe.' : 'Das KI-Paket ist für diesen Anbieter noch nicht aktiv. Die Vorlage ist ein kostenloser Layout-Test.'}</p><div class="editor-actions"><button class="button quiet" data-action="step" data-step="1">Zurück</button>${cloud.status?.connections.openai && !project.demoOnly ? `<button class="button primary" data-action="generate-ai"${busy ? ' disabled' : ''}>${busy === 'storyboard' ? '<span class="busy-indicator"></span>KI plant eure Szenen …' : 'Mit KI planen' + icon('spark')}</button>` : `<button class="button primary" data-action="generate-storyboard">Vorlage testen ${icon('spark')}</button>`}</div></div>`;
 }
 
 function storyboardEditor() {
@@ -368,6 +405,7 @@ function invalidate() {
   project.status = 'Entwurf';
   exportState = null;
   costConsent = false;
+  productionEstimate=null;workflowState.reviewedRender='';
   if (productionJob?.status === 'ready') { productionJob = null; mediaReady = false; realMedia.reset(); }
 }
 
@@ -392,6 +430,8 @@ function goStep(nextStep) {
 }
 
 function resetAssets() {
+  ++cutWatchSequence;
+  productionEstimate=null;retryBaseJob=null;retryScene=null;workflowState.reviewedRender='';
   stopWatching(); productionJob = null; mediaReady = false; realMedia.reset(); candidates = []; costConsent = false;
   assets.forEach(asset => URL.revokeObjectURL(asset.url)); assets = [];
   if (logo) URL.revokeObjectURL(logo.url);
@@ -412,7 +452,7 @@ document.addEventListener('click', async event => {
   if (exportRunning) return toast('Der Export läuft. Änderungen sind danach wieder möglich.');
   const action = button.dataset.action;
   if (busy) return toast('Deine Aktion läuft noch.');
-  if(action==='export-studio'&&cloud.status?.production?.configured&&project.source==='ai_assisted'&&(productionJob?.status==='ready'||workflowState.production?.renders?.length)){await workflowAction({dataset:{action:'wf-download'}},workflowContext());return;}
+  if(action==='export-studio'&&cloud.status?.production?.configured&&project.source==='ai_assisted'){try{await workflowAction({dataset:{action:'wf-download'}},workflowContext());}catch(error){toast(error.message);}return;}
   if(action.startsWith('wf-')){try{await workflowAction(button,workflowContext());}catch(error){toast(error.message);}return;}
   if(action==='website-images'){await runTask('images',async()=>{if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Materialrechte.');await saveCloudProject(false);const result=await api('/api/websites/import',{method:'POST',body:{projectId:project.id,rightsAccepted:true},billable:true});await openProject(result.project.id);step=2;toast('Webseitenbilder privat gespeichert. Bitte prüfe die Motive.');});return;}
   if (await pilotAction(action, button)) return;
@@ -539,7 +579,8 @@ document.addEventListener('change', async event => {
   }
   if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject(); if (selected) applyCompany(selected); step = 1; render(); }
   if(event.target.id==='production-music'){project.musicEnabled=event.target.checked;project.approved=false;resetPublicationFile();render();}
-  if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; render(); }
+  if(event.target.id==='final-reviewed'){workflowState.reviewedRender=event.target.checked?workflowState.production?.renders?.[0]?.id:'';render();}
+  if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; productionEstimate=null;render(); }
   if (event.target.id === 'cost-consent') { costConsent = event.target.checked; render(); }
   if (event.target.id === 'upload-ai') { uploadContainsAi = event.target.checked; uploadApproved = false; exportState = null; render(); }
   if (event.target.id === 'upload-approved') { uploadApproved = event.target.checked; const button = $('#export-upload'); if (button) button.disabled = !uploadApproved || sourceVideo.duration > 60 || !Number.isFinite(sourceVideo.duration); }
@@ -632,7 +673,7 @@ function syncPreviewUi() {
   const label = activeLabel();
   $('#label-status').classList.toggle('off', !label);
   $('#label-status').innerHTML = icon(label ? 'check' : 'info') + (label ? 'KI-Kennzeichnung aktiv' : 'Keine KI-Inhalte angegeben');
-  $('#preview-caption').textContent = view === 'upload' ? uploadFile ? 'Originalformat ohne Beschnitt im Hochformat' : 'Deine lokale Videovorschau' : !project.scenes.length ? 'Fiktive Beispielvorschau · noch kein Entwurf' : assets.length ? productionJob?.status === 'ready' && productionJob.mode === 'video' && mediaReady ? 'Echte KI-Bewegtbilder · eigene Unternehmensfotos' : project.source === 'ai_assisted' ? 'KI-Storyboard · Foto-Layout-Vorschau' : 'Deine Fotos · Layout-Test' : 'Platzhalter-Motive · eigene Fotos möglich';
+  $('#preview-caption').textContent = view==='upload' ? uploadFile?'Originalformat ohne Beschnitt im Hochformat':'Deine lokale Videovorschau' : productionJob?.status==='ready'&&mediaReady ? project.visualSource==='generated'?'Erzeugte KI-Filmszenen · fertiges MP4 mit Musik unten prüfen':'Gespeicherte Filmszenen · fertiges MP4 unten prüfen' : project.scenes.length ? 'Storyboard-Vorschau · noch keine erzeugten Filmszenen' : 'Fiktive Beispielvorschau · noch kein Film';
   $('#scene-strip').hidden = view === 'upload';
   const index = getSceneAt(activeScenes(), player.time).index;
   $('#scene-strip').innerHTML = activeScenes().map((scene, i) => `<button class="scene-thumb${index === i ? ' active' : ''}" data-action="preview-scene" data-index="${i}" aria-label="Szene ${i+1} in der Vorschau ansehen"><span class="scene-thumb-art">0${i+1}</span><span>${formatSceneTime(scene.seconds)}</span></button>`).join('');
@@ -819,6 +860,7 @@ function setExportProgress(progress, message, detail) {
 async function exportVideo(mode) {
   if (exportRunning) return;
   if (mode === 'studio' && (!project.approved || project.scenes.length !== 4)) return toast('Bitte prüfe und bestätige zuerst deinen Entwurf.');
+  if(mode==='studio'&&!project.demoOnly&&project.source==='ai_assisted'&&!productionJob)return toast('Dein Storyboard enthält noch keinen fertigen Film. Starte zuerst die Produktion.');
   if (mode === 'upload' && (!uploadApproved || !uploadFile || sourceVideo.duration > 60 || sourceVideo.readyState < 2)) return toast('Bitte lade ein Video bis 60 Sekunden und bestätige die Vorschau.');
   if (!globalThis.MediaRecorder || !canvas.captureStream) return toast('Dieser Browser unterstützt den lokalen Video-Export nicht. Du kannst das Storyboard als JSON speichern.');
   const mime = selectRecorderMime(type => MediaRecorder.isTypeSupported(type));
@@ -882,10 +924,10 @@ async function exportVideo(mode) {
     const blob = new Blob(chunks, { type: recorder.mimeType || mime });
     const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
     if (mode === 'upload' || !project.demoOnly && assets.length) setPublicationFile(blob, mode, mode === 'upload' ? uploadContainsAi : true);
-    download(blob, safeFilename(mode === 'studio' ? project.company : uploadFile.name.replace(/\.[^.]+$/, '')) + '-grvkn.' + extension);
+    download(blob, safeFilename(mode === 'studio' ? project.company : uploadFile.name.replace(/\.[^.]+$/, '')) + (mode==='studio'&&!realProduction?'-layout-test.':'-grvkn.') + extension);
     setExportProgress(100, 'Fertig. Dein Video wurde heruntergeladen.', mode === 'upload' ? sourceHadAudio ? 'Mit Originalton. Die ausgewählte KI-Kennzeichnung ist ins Video gerendert.' : 'Ohne Tonspur. Die ausgewählte KI-Kennzeichnung ist ins Video gerendert.' : realProduction ? 'Dein Film mit fest gerenderter KI-Kennzeichnung.' : 'Animierter Layout-Test mit fest gerenderter Demo-Kennzeichnung.');
     if (mode === 'studio') {
-      project.status = 'Exportiert';
+      project.status = realProduction?'Exportiert':'Layout-Test';
       try { await saveProject(false); } catch { toast('Video heruntergeladen. Der Projektstatus konnte gerade nicht auf dem Server gespeichert werden.'); }
     }
     succeeded = true;

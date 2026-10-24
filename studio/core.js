@@ -29,7 +29,7 @@ export function createProject() {
     id: globalThis.crypto?.randomUUID?.() ?? 'project-' + Date.now(),
     name: '', company: '', city: '', website: '', facts: '', confirmed: false,
     goal: 'Unternehmen vorstellen', category: 'Handwerk', focus: '', cta: 'Entdecke uns auf GRVKN',
-    duration: 20, musicEnabled: true, websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
+    duration: 20, musicEnabled: true, visualSource: 'generated', visualBible: '', requirements: [], websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
     updatedAt: new Date().toISOString(), status: 'Entwurf', source: 'studio-ai-demo',
     companyId: '', assetIds: [], logoId: '', demoOnly: false, founderDemo:false,aiRightsConfirmed:false,providerType: 'business', grvknAdId: ''
   };
@@ -90,6 +90,9 @@ export function safeProject(input) {
   clean.confirmed = input.confirmed === true;
   clean.approved = input.approved === true;
   clean.musicEnabled = input.musicEnabled !== false;
+  clean.visualSource = input.visualSource === 'photos' || (!input.visualSource && input.assetIds?.length) ? 'photos' : 'generated';
+  clean.visualBible = String(input.visualBible || '').slice(0, 600);
+  clean.requirements = Array.isArray(input.requirements) ? input.requirements.slice(0, 12).map(r => ({text: String(r?.text || '').slice(0, 180), scene: Math.max(0, Math.min(3, Number(r?.scene) || 0))})).filter(r => r.text) : [];
   clean.websiteImageSources = Array.isArray(input.websiteImageSources) ? input.websiteImageSources.slice(0,4).map(x=>({url:String(x.url||'').slice(0,1000),source:String(x.source||'').slice(0,1000),name:String(x.name||'').slice(0,100)})) : [];
   clean.source = input.source === 'ai_assisted' ? 'ai_assisted' : 'studio-ai-demo';
   clean.companyId = typeof input.companyId === 'string' ? input.companyId.slice(0, 120) : '';
@@ -103,7 +106,7 @@ export function safeProject(input) {
   clean.scenes = Array.isArray(input.scenes) ? input.scenes.slice(0, 4).map((scene, i) => ({ id: i + 1,
     headline: String(scene?.headline ?? '').slice(0, 96), subtitle: String(scene?.subtitle ?? '').slice(0, 180),
     voiceover: String(scene?.voiceover ?? '').slice(0, 300), visual: String(scene?.visual ?? '').slice(0, 100),
-    prompt: String(scene?.prompt ?? '').slice(0, 800), imageIndex: Math.max(0, Math.min(3, Number(scene?.imageIndex) || 0)), seconds: clean.duration / 4 })) : [];
+    prompt: String(scene?.prompt ?? '').slice(0, 800), imagePrompt: String(scene?.imagePrompt ?? '').slice(0, 650), imageIndex: Math.max(0, Math.min(3, Number(scene?.imageIndex) || 0)), seconds: clean.duration / 4 })) : [];
   if (clean.scenes.length !== 4) { clean.scenes = []; clean.approved = false; }
   return clean;
 }
@@ -113,7 +116,7 @@ export function projectManifest(project, production = null) {
   const ready = production?.status === 'ready';
   return { schemaVersion: 'grvkn-studio.pilot.v2', mode: ready ? production.mode === 'video' ? 'ai_video' : 'photo_film' : aiPlanned ? 'ai_storyboard' : 'prototype_template_demo', simulatesAiProduction: !aiPlanned && !ready,
     createdAt: new Date().toISOString(), company: { name: project.company, city: project.city, providerType: providerType(project.providerType), website: project.website, facts: project.facts, confirmed: project.confirmed },
-    briefing: { goal: project.goal, category: project.category, focus: project.focus, cta: project.cta, duration: project.duration, style: project.style },
+    briefing: { goal: project.goal, category: project.category, focus: project.focus, cta: project.cta, duration: project.duration, style: project.style, visualSource: project.visualSource, visualBible: project.visualBible, requirements: project.requirements },
     provenance: { research: project.companyId ? 'saved_company_profile' : 'user_supplied_only', generatedFootage: ready && production.mode === 'video', generatedSpeech: ready && Boolean(production.audio), demoAiLabel: !aiPlanned && !ready },
     containsAi: needsAiLabel({ provenance: 'studio-ai-demo' }), aiLabel: AI_LABEL, approved: project.approved,
     sharing: normalizeAdId(project.grvknAdId) ? { adId: normalizeAdId(project.grvknAdId), publicUrl: publicAdLink(project.grvknAdId), publicationStatus: 'not_checked' } : null,
