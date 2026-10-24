@@ -5,8 +5,9 @@ export const workflowState={campaigns:[],slots:[],costs:null,production:null,err
 export function matchingFailedDraft(project,job){
  return job?.status==='failed'&&['id','company','website','duration','visualSource','visualBible','assetIds'].every(k=>JSON.stringify(project[k])===JSON.stringify(job.snapshot?.[k]));
 }
+const orderedValue=value=>Array.isArray(value)?value.map(orderedValue):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,orderedValue(value[key])])):value;
 export function matchingOutput(project,render,jobId=''){
- return Boolean(render?.status==='ready'&&render.project_id===project.id&&(!jobId||render.job_id===jobId)&&['id','company','website','duration','assetIds','visualSource','visualBible','color','musicEnabled','logoId','scenes'].every(k=>JSON.stringify(render.snapshot[k])===JSON.stringify(project[k])));
+ return Boolean(render?.status==='ready'&&render.project_id===project.id&&(!jobId||render.job_id===jobId)&&['id','company','website','duration','assetIds','visualSource','visualBible','color','musicEnabled','logoId','scenes'].every(k=>JSON.stringify(orderedValue(render.snapshot[k]))===JSON.stringify(orderedValue(project[k]))));
 }
 const states={planned:'Geplant',researching:'Website wird vorbereitet',storyboarding:'Storyboard wird erstellt',awaiting_storyboard:'Storyboard prüfen',approved:'Produktion bestätigt',producing:'Film wird produziert',awaiting_video:'Fertigen Film prüfen',approved_video:'Bereit zur Einreichung',changes_requested:'Änderungen angefragt',skipped:'Diese Woche übersprungen',expired:'Angebot abgelaufen',blocked:'Deine Mithilfe ist nötig',submitted:'Zur Moderation eingereicht'};
 const date=s=>new Date(s).toLocaleString('de-DE',{timeZone:'Europe/Berlin',dateStyle:'medium',timeStyle:'short'});
