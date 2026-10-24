@@ -160,6 +160,13 @@ async function watchFinalOutput(){
     await new Promise(resolve=>setTimeout(resolve,5000));
   }
 }
+async function completeProduction(job){
+  cloud.status=await api('/api/status');render();
+  if(job.status==='ready'){
+    if(cloud.status.production?.configured){await api('/api/renders',{method:'POST',body:{projectId:project.id,jobId:job.id}});await loadProductionOutput(project.id);render();void watchFinalOutput();}
+    toast('Die Filmszenen sind gespeichert. Dein MP4 wird jetzt mit Ton geschnitten.');
+  }
+}
 async function watchProduction() {
   const generation = ++watchSequence, jobId = productionJob?.id;
   if (!jobId || !['queued', 'processing'].includes(productionJob.status)) return;
@@ -169,8 +176,7 @@ async function watchProduction() {
       if (generation !== watchSequence || productionJob?.id !== jobId) return;
       await loadProduction(job); render();
       if (!['queued', 'processing'].includes(job.status)) {
-        cloud.status=await api('/api/status');render();
-        if (job.status === 'ready') {if(cloud.status.production?.configured){await api('/api/renders',{method:'POST',body:{projectId:project.id,jobId:job.id}});await loadProductionOutput(project.id);render();void watchFinalOutput();}toast('Die Filmszenen sind gespeichert. Dein MP4 wird jetzt mit Ton geschnitten.');}
+        await completeProduction(job);
         return;
       }
     } catch (error) { if (generation === watchSequence) { toast(error.message); render(); } return; }
@@ -250,6 +256,7 @@ async function pilotAction(action, button) {
         ? await api('/api/jobs/'+productionJob.id+'/advance',{method:'POST',body:{}})
         : await api('/api/jobs/' + productionJob.id);
       await loadProduction(job);
+      if(job.status==='ready')await completeProduction(job);
       if (job.status === 'needs_review') toast('Im Runway- bzw. OpenAI-Konto prüfen. Unklare Aufträge werden nicht erneut gestartet.');
     });
     if (ok) void watchProduction();

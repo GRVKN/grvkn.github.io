@@ -1,6 +1,6 @@
 {
   "release": "studio-wunschtext-recovery-20261024",
-  "sourceCommit": "28ff37d8a1ac144badef0d28c125b503849f0f71",
+  "sourceCommit": "416041bd995be40261a446eaf985b410b2d43c92",
   "features": [
     "video_from_wish_text",
     "generated_scene_references",
