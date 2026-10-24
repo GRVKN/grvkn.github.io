@@ -191,7 +191,7 @@ async function pilotAction(action, button) {
   }
   if(action==='correct-scene'){
     if(!productionJob||!['ready','failed'].includes(productionJob.status))return true;
-    retryBaseJob=productionJob;retryScene=Number(button.dataset.index);productionEstimate=null;costConsent=false;project.approved=false;expandedScene=retryScene;step=3;render();return true;
+    retryBaseJob=productionJob;retryScene=Number(button.dataset.index);productionEstimate=null;costConsent=false;project.approved=false;expandedScene=retryScene<0?productionJob.scenes.find(s=>s.status==='failed').index:retryScene;step=3;render();return true;
   }
   if(action==='full-production'){retryScene=null;productionEstimate=null;costConsent=false;productionJob=null;mediaReady=false;realMedia.reset();render();return true;}
   if(action==='estimate-production'){
