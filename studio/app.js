@@ -99,7 +99,6 @@ async function saveCloudProject(announce) {
   project.assetIds = assets.map(asset => asset.id); project.logoId = logo?.id || '';
   const { project: saved } = await api('/api/projects', { method: 'PUT', body: safeProject(project) });
   project = safeProject(saved); upsert(cloud.projects, saved); projects = cloud.projects.map(safeProject);
-  if(project.aiRightsConfirmed&&cloud.status?.backendReady)await api('/api/rights/consent',{method:'POST',body:{projectId:project.id,accepted:true}});
   if (announce) toast('Projekt gespeichert – inklusive Fotos und Logo. Dein Studio merkt sich den Betrieb.');
 }
 async function researchCompany() {
