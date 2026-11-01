@@ -32,6 +32,8 @@ let toastTimer;
 let busy = '';
 let candidates = [];
 let websiteChallenge=null;
+let websiteProofUrl='';
+let approvalRefresh=null;
 let productionJob = null;
 let productionMode = 'video';
 let productionVoice = true;
@@ -58,7 +60,7 @@ function workflowContext(){return {run:fn=>runTask('workflow',fn),project:()=>pr
 function pilotState() {
   const finalOutput=workflowState.production?.renders?.[0];
   const finalReady=matchingOutput(project,finalOutput,productionJob?.id);
-  return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,job: productionJob,finalOutput,finalReady,
+  return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,websiteProofUrl,job: productionJob,finalOutput,finalReady,
     productionMode, voice: productionVoice, costConsent, productionEstimate, retryBaseJob, retryScene, finalReviewed:workflowState.reviewedRender===finalOutput?.id,mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
 }
 function activeProduction() { return Boolean(productionJob && ['reserving', 'queued', 'processing', 'needs_review'].includes(productionJob.status)); }
@@ -72,6 +74,32 @@ function updateConnectionNotice() {
   const personal = $('.workspace-person small');
   if (personal) personal.textContent = cloud.ready ? cloud.status.user.email || 'Angemeldetes Studio' : 'Private Pilotphase';
 }
+async function refreshApprovalStatus(announce=false) {
+  if(approvalRefresh)return approvalRefresh;
+  approvalRefresh=(async()=>{
+    const previous=cloud.status;
+    let status;
+    try{status=await api('/api/status');}catch(error){
+      if([401,403].includes(error.status)){cloud.ready=false;cloud.status=null;cloud.error=error.message;cloud.signin=error.status===401;websiteChallenge=null;if(!busy)render();}
+      throw error;
+    }
+    if(!status.backendReady||!status.security)throw new Error('Der geschützte Freigabestatus ist gerade nicht erreichbar. Bitte versuche es erneut.');
+    cloud.status=status;
+    if(status.security.website?.status==='verified'||previous?.security?.website?.version!==status.security.website?.version)websiteChallenge=null;
+    if(JSON.stringify(previous?.security)!==JSON.stringify(status.security)&&!busy)render();
+    if(announce)toast(status.security.website?.status==='verified'?'Die Website-Freigabe ist bestätigt. Materialrechte und Tarif werden separat geprüft.':'Der Freigabestatus ist aktuell. Der Website-Nachweis ist noch offen.');
+    return status;
+  })();
+  try{return await approvalRefresh;}finally{approvalRefresh=null;}
+}
+function refreshApprovalWhenVisible(){
+  if(document.hidden||busy||exportRunning||!cloud.ready||document.activeElement?.matches('input,textarea,select,[contenteditable]'))return;
+  void refreshApprovalStatus().catch(()=>{});
+}
+window.addEventListener('focus',refreshApprovalWhenVisible);
+const approvalRefreshTimer=setInterval(refreshApprovalWhenVisible,30000);
+window.addEventListener('pagehide',()=>clearInterval(approvalRefreshTimer),{once:true});
+
 async function runTask(kind, execute) {
   if (busy) return false;
   busy = kind; render();
@@ -131,6 +159,7 @@ async function loadProduction(job) {
   }
 }
 async function openProject(projectId) {
+  websiteChallenge=null;websiteProofUrl='';
   stopWatching(); resetAssets();
   const result = await api('/api/projects/' + encodeURIComponent(projectId));
   project = safeProject(result.project);
@@ -184,7 +213,7 @@ async function watchProduction() {
   }
 }
 async function pilotAction(action, button) {
-  if (!['visual-source','estimate-production','correct-scene','full-production','website-begin','website-dns','website-file','founder-demo-create','billing-checkout','research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
+  if (!['visual-source','estimate-production','correct-scene','full-production','website-begin','website-dns','website-file','website-refresh','website-download','website-use-approved','founder-demo-create','billing-checkout','research-live', 'select-website', 'generate-ai', 'refresh-connection', 'production-mode', 'start-production', 'resume-production', 'cancel-production', 'reload-production'].includes(action)) return false;
   if(action==='visual-source'){
     project.visualSource=button.dataset.source==='photos'?'photos':'generated';project.visualBible='';project.requirements=[];project.scenes=[];
     productionMode='video';retryBaseJob=null;retryScene=null;invalidate();render();return true;
@@ -201,9 +230,27 @@ async function pilotAction(action, button) {
       costConsent=false;
     });return true;
   }
+  if(action==='website-refresh'){
+    await runTask('verify',()=>refreshApprovalStatus(true));return true;
+  }
+  if(action==='website-download'){
+    if(!websiteChallenge?.token)return true;
+    const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([websiteChallenge.token+'\n'],{type:'text/plain;charset=utf-8'}));link.download='grvkn-studio-verification.txt';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);return true;
+  }
+  if(action==='website-use-approved'){
+    const website=cloud.status?.security?.website;
+    if(website?.status==='verified'&&project.website!==website.url){project.website=website.url;websiteProofUrl='';project.aiRightsConfirmed=false;invalidate();render();toast('Bestätigte Homepage übernommen. Prüfe und bestätige die Materialrechte für diesen Entwurf erneut.');}
+    return true;
+  }
   if(action==='website-begin'){
     const website=$('#website-proof-url')?.value;
-    await runTask('verify',async()=>{const result=await api('/api/websites',{method:'POST',body:{website}});websiteChallenge=result.challenge;project.website=result.website.url;project.aiRightsConfirmed=false;cloud.status=await api('/api/status');toast('Nachweis angelegt. Bitte DNS-TXT oder HTTPS-Datei setzen.');});return true;
+    await runTask('verify',async()=>{
+      const result=await api('/api/websites',{method:'POST',body:{website}});
+      websiteChallenge=result.challenge||null;websiteProofUrl='';
+      if(project.website!==result.website.url){project.website=result.website.url;project.aiRightsConfirmed=false;invalidate();}
+      cloud.status=await api('/api/status');
+      toast(result.alreadyVerified?'Die Website ist bereits bestätigt. Deine bestehende Freigabe bleibt erhalten.':'Nachweis angelegt. Lade die Prüfdatei herunter oder setze den DNS-TXT-Eintrag.');
+    });return true;
   }
   if(action==='website-dns'||action==='website-file'){
     await runTask('verify',async()=>{await api('/api/websites/verify',{method:'POST',body:{method:action==='website-dns'?'dns_txt':'https_file'}});websiteChallenge=null;cloud.status=await api('/api/status');toast('Genau diese Unternehmenswebsite wurde bestätigt.');});return true;
@@ -516,7 +563,7 @@ document.addEventListener('click', async event => {
     download(new Blob([JSON.stringify(projectManifest(project, productionJob), null, 2)], { type: 'application/json' }), safeFilename(project.company) + '-storyboard.json');
     toast('Storyboard heruntergeladen. Fotos und Logo sind nicht in der JSON-Datei enthalten.');
   }
-  if (action === 'new-project') { workflowState.production=null;resetAssets(); project = newProviderProject(); {const ownCompany=cloud.companies.find(c=>c.id===`${account.provider.business_id}_${account.user.id}`);if(ownCompany)applyCompany(ownCompany);} step = 1; researchShown = false; navigate('studio'); }
+  if (action === 'new-project') { workflowState.production=null;resetAssets(); project = newProviderProject();websiteChallenge=null;websiteProofUrl=''; {const ownCompany=cloud.companies.find(c=>c.id===`${account.provider.business_id}_${account.user.id}`);if(ownCompany)applyCompany(ownCompany);} step = 1; researchShown = false; navigate('studio'); }
   if (action === 'load-project') {
     const found = projects.find(item => item.id === button.dataset.id);
     if (!found) return;
@@ -586,7 +633,7 @@ document.addEventListener('change', async event => {
     project.approved = event.target.checked; project.status = project.approved ? 'Geprüft' : 'Entwurf';
     render();
   }
-  if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject(); if (selected) applyCompany(selected); step = 1; render(); }
+  if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject();websiteChallenge=null;websiteProofUrl=''; if (selected) applyCompany(selected); step = 1; render(); }
   if(event.target.id==='production-music'){project.musicEnabled=event.target.checked;project.approved=false;resetPublicationFile();render();}
   if(event.target.id==='final-reviewed'){workflowState.reviewedRender=event.target.checked?workflowState.production?.renders?.[0]?.id:'';render();}
   if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; productionEstimate=null;render(); }
@@ -962,7 +1009,7 @@ void connectWorkspace().then(() => {
   if (cloud.ready) {
     projects = cloud.projects.map(safeProject);
     if (!project.scenes.length) { const saved = cloud.companies.find(company => company.id === project.companyId); if (saved) applyCompany(saved); }
-    if(!project.website&&cloud.status?.security?.website?.status==='verified')project.website=cloud.status.security.website.url;
+    if(cloud.status?.security?.website?.url&&!project.founderDemo&&!project.demoOnly&&(!project.website||project.website===account.business.website_url))project.website=cloud.status.security.website.url;
     if (!cloud.status.connections.runway) productionMode = 'photos';
   }
   render();
@@ -973,7 +1020,7 @@ function chooseOwnAd(value) {
   if (!ad) return toast('Bitte wähle eines deiner GRVKN-Videos.');
   project.grvknAdId = ad.id; render();
 }
-document.addEventListener('input', event => { if (event.target.dataset.publish) readPublicationInputs(); });
+document.addEventListener('input', event => { if(event.target.id==='website-proof-url')websiteProofUrl=event.target.value; if (event.target.dataset.publish) readPublicationInputs(); });
 document.addEventListener('change', event => {
   if(event.target.id==='wf-month'){workflowState.month=event.target.value;render();}
   if (event.target.dataset.publish === 'contentType') { readPublicationInputs(); render(); }

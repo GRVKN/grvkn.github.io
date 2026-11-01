@@ -7,7 +7,7 @@ export async function backendFetch(path, options = {}) {
   const { data: { session } } = await account.client.auth.getSession();
   if (!session) throw new Error('Bitte melde dich erneut bei GRVKN an.');
   return fetch(account.client.supabaseUrl + '/functions/v1/grvkn-studio' + path.replace(/^\/api/, ''), {
-    ...options, credentials: 'omit', headers: { ...options.headers, Authorization: 'Bearer ' + session.access_token, apikey: account.client.supabaseKey, 'X-GRVKN-Business-ID': account.provider.business_id },
+    ...options, cache: 'no-store', credentials: 'omit', headers: { ...options.headers, Authorization: 'Bearer ' + session.access_token, apikey: account.client.supabaseKey, 'X-GRVKN-Business-ID': account.provider.business_id },
   });
 }
 async function signed(asset) {
@@ -19,7 +19,7 @@ export async function nativeApi(path, { method = 'GET', body, headers = {} } = {
   const url = new URL(path, location.origin), parts = url.pathname.split('/').filter(Boolean), route = parts[1], id = parts[2];
   if (route === 'status') {
     let status;
-    try { const response = await backendFetch(path); if (response.ok) { status = await response.json(); backendReady = true; } } catch {}
+    try { const response = await backendFetch(path); if (response.ok) { status = await response.json(); backendReady = true; } else if ([401,403].includes(response.status)) { backendReady = false; return response; } } catch {}
     if (status) return result(status);
     backendReady = false;
     const probe = await client.from('studio_projects').select('id').eq('user_id', owner).limit(0);
