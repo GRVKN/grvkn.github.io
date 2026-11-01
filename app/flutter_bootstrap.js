@@ -34,11 +34,24 @@ addEventListener("message", eventListener);
 if (!window._flutter) {
   window._flutter = {};
 }
-_flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}]};
+_flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}],"useLocalCanvasKit":true};
 
 
-_flutter.loader.load({
-  serviceWorkerSettings: {
-    serviceWorkerVersion: "2994450220"
+// Retire only this app's legacy offline worker. Stale cached Flutter bundles
+// otherwise keep serving old feed controls after a production release.
+(async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const scope = new URL('./', document.baseURI).href;
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.filter(registration =>
+        registration.scope === scope &&
+        [registration.active, registration.waiting, registration.installing]
+          .some(worker => worker?.scriptURL === new URL('flutter_service_worker.js', scope).href)
+      ).map(registration => registration.unregister()));
+    } catch (error) {
+      console.warn('GRVKN konnte den bisherigen Offline-Cache nicht bereinigen.', error);
+    }
   }
-});
+  _flutter.loader.load();
+})();
