@@ -1,5 +1,8 @@
 import { normalizeAdId, publicAdLink, providerType } from './grvkn.js';
 export const AI_LABEL = 'Mit KI generiert';
+export const FOUNDER_DEMO_LABEL = 'INTERNE DEMO · FIKTIVES SZENARIO';
+export const FOUNDER_DEMO_CTA = 'Lerne den Betrieb kennen';
+const DEFAULT_CTA = 'Entdecke uns auf GRVKN';
 export const CATEGORIES = ['Handwerk', 'Dienstleister', 'Gastronomie', 'Veranstaltungen/Kultur', 'Shopping', 'Auto/Mobilität', 'Stellenanzeigen', 'Azubi', 'Pflege/Soziales', 'Immobilien', 'Vereine/Sport', 'Bildung', 'Freizeit', 'Tourismus'];
 export const GOALS = ['Unternehmen vorstellen', 'Angebot zeigen', 'Stellenanzeige', 'Azubi gesucht', 'Veranstaltung'];
 export const runwaySceneSeconds=seconds=>Number(seconds)<=5?5:10;
@@ -28,7 +31,7 @@ export function createProject() {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? 'project-' + Date.now(),
     name: '', company: '', city: '', website: '', facts: '', confirmed: false,
-    goal: 'Unternehmen vorstellen', category: 'Handwerk', focus: '', cta: 'Entdecke uns auf GRVKN',
+    goal: 'Unternehmen vorstellen', category: 'Handwerk', focus: '', cta: DEFAULT_CTA,
     duration: 20, musicEnabled: true, visualSource: 'generated', visualBible: '', requirements: [], websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
     updatedAt: new Date().toISOString(), status: 'Entwurf', source: 'studio-ai-demo',
     companyId: '', assetIds: [], logoId: '', demoOnly: false, founderDemo:false,aiRightsConfirmed:false,providerType: 'business', grvknAdId: ''
@@ -48,6 +51,22 @@ function clip(value, length) {
   return text.length <= length ? text : text.slice(0, length - 1).trimEnd() + '…';
 }
 
+export function projectCallToAction(project) {
+  if (project.founderDemo && (!project.cta || project.cta === DEFAULT_CTA)) return FOUNDER_DEMO_CTA;
+  return project.cta;
+}
+
+export function hasOnlyWebsitePhotos(project) {
+  if (project.visualSource !== 'photos' || !project.assetIds?.length || project.logoId) return false;
+  try {
+    const host = new URL(project.website).hostname;
+    const sourceIds = (project.websiteImageSources || []).filter(source => new URL(source.url).hostname === host).map(source => source.assetId);
+    return project.assetIds.every(id => sourceIds.includes(id));
+  } catch {
+    return false;
+  }
+}
+
 export function buildStoryboard(project) {
   const company = clip(project.company, 80);
   const city = clip(project.city, 60);
@@ -60,7 +79,7 @@ export function buildStoryboard(project) {
     'Azubi gesucht': 'Dein Start.\nIn deiner Region.',
     'Veranstaltung': 'Deine Region\nhat etwas vor.'
   };
-  const titles = [hooks[project.goal] || hooks['Unternehmen vorstellen'], 'Darum geht’s.', 'Aus deiner Region.', clip(project.cta || 'Entdecke uns auf GRVKN', 96)];
+  const titles = [hooks[project.goal] || hooks['Unternehmen vorstellen'], 'Darum geht’s.', 'Aus deiner Region.', clip(projectCallToAction(project) || DEFAULT_CTA, 96)];
   const subtitles = [company + ' · ' + city, clip(project.focus, 140), clip(project.facts || company + ' in ' + city, 160), company + ' · ' + city];
   const visuals = ['Einstieg / Außenansicht', 'Angebot / Details', 'Unternehmen / Atmosphäre', 'Abschluss / Kontakt'];
   return titles.map((headline, index) => ({ id: index + 1, headline, subtitle: subtitles[index],
@@ -93,7 +112,10 @@ export function safeProject(input) {
   clean.visualSource = input.visualSource === 'photos' || (!input.visualSource && input.assetIds?.length) ? 'photos' : 'generated';
   clean.visualBible = String(input.visualBible || '').slice(0, 600);
   clean.requirements = Array.isArray(input.requirements) ? input.requirements.slice(0, 12).map(r => ({text: String(r?.text || '').slice(0, 180), scene: Math.max(0, Math.min(3, Number(r?.scene) || 0))})).filter(r => r.text) : [];
-  clean.websiteImageSources = Array.isArray(input.websiteImageSources) ? input.websiteImageSources.slice(0,4).map(x=>({url:String(x.url||'').slice(0,1000),source:String(x.source||'').slice(0,1000),name:String(x.name||'').slice(0,100)})) : [];
+  clean.websiteImageSources = Array.isArray(input.websiteImageSources) ? input.websiteImageSources.slice(0,4).map(x=>({
+    url:String(x?.url||'').slice(0,1000),source:String(x?.source||'').slice(0,1000),name:String(x?.name||'').slice(0,100),
+    ...(typeof x?.assetId==='string' ? {assetId:x.assetId.slice(0,120)} : {})
+  })) : [];
   clean.source = input.source === 'ai_assisted' ? 'ai_assisted' : 'studio-ai-demo';
   clean.companyId = typeof input.companyId === 'string' ? input.companyId.slice(0, 120) : '';
   clean.assetIds = Array.isArray(input.assetIds) ? input.assetIds.filter(value => typeof value === 'string').slice(0, 4) : [];

@@ -1,4 +1,4 @@
-import { AI_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, projectManifest, selectRecorderMime } from './core.js';
+import { AI_LABEL, FOUNDER_DEMO_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, hasOnlyWebsitePhotos, projectCallToAction, projectManifest, selectRecorderMime } from './core.js';
 import { cloud, api, connectWorkspace, uploadImage, restoreImage } from './cloud.js';
 import { companyView, storyboardView, exportView, settingsView } from './views.js';
 import {workflowState,loadWorkflows,loadProductionOutput,workflowView,workflowAction,productionPanel,matchingOutput,matchingFailedDraft} from './workflow-ui.js';
@@ -33,6 +33,7 @@ let busy = '';
 let candidates = [];
 let websiteChallenge=null;
 let websiteProofUrl='';
+let founderDraft = {};
 let approvalRefresh=null;
 let productionJob = null;
 let productionMode = 'video';
@@ -54,13 +55,18 @@ let sourceSequence = 0;
 let exportRunning = false;
 const fallback = exampleProject();
 const fallbackScenes = buildStoryboard(fallback);
+const demoFallbackScenes = buildStoryboard({
+  ...createProject(), founderDemo: true, company: 'Demo-Anbieter', city: 'Ort offen',
+  focus: 'Hier entsteht dein Demo-Film.'
+});
 
 function workflowContext(){return {run:fn=>runTask('workflow',fn),project:()=>project,job:()=>productionJob,open:openProject,save:()=>saveCloudProject(false),download,toast,useFilm:(blob,renderId)=>{setPublicationFile(blob,'studio',true);publishing.renderId=renderId;step=4;view='studio';toast('Gespeicherten Film übernommen. Ergänze die Angaben für die Moderation.');}};}
 
 function pilotState() {
   const finalOutput=workflowState.production?.renders?.[0];
   const finalReady=matchingOutput(project,finalOutput,productionJob?.id);
-  return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,websiteProofUrl,job: productionJob,finalOutput,finalReady,
+  return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,websiteProofUrl,founderDraft,
+    canSwitchProvider: account.providers.length > 1, profileLocked: activeProduction(), job: productionJob,finalOutput,finalReady,
     productionMode, voice: productionVoice, costConsent, productionEstimate, retryBaseJob, retryScene, finalReviewed:workflowState.reviewedRender===finalOutput?.id,mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
 }
 function activeProduction() { return Boolean(productionJob && ['reserving', 'queued', 'processing', 'needs_review'].includes(productionJob.status)); }
@@ -113,6 +119,12 @@ function applyCompany(company) {
   project.providerType = providerType(company.providerType);
 }
 function upsert(list, value) { const index = list.findIndex(item => item.id === value.id); if (index < 0) list.unshift(value); else list[index] = value; }
+async function saveBeforeProviderChange() {
+  const hasWork = cloud.projects.some(item => item.id === project.id) || project.confirmed
+    || project.focus.trim() || project.scenes.length || assets.length || logo;
+  if (hasWork && !project.demoOnly && project.company.trim() && project.city.trim()) await saveProject(false);
+}
+
 async function saveCompany() {
   if (!cloud.ready || project.demoOnly) return;
   const { company } = await api('/api/companies', { method: 'POST', body: {
@@ -163,6 +175,9 @@ async function openProject(projectId) {
   stopWatching(); resetAssets();
   const result = await api('/api/projects/' + encodeURIComponent(projectId));
   project = safeProject(result.project);
+  const websitePhotos = hasOnlyWebsitePhotos(project);
+  productionMode = websitePhotos || !cloud.status?.connections.runway ? 'photos' : 'video';
+  if (websitePhotos) productionVoice = false;
   const images = result.assets.filter(asset => project.assetIds.includes(asset.id)).sort((a, b) => project.assetIds.indexOf(a.id) - project.assetIds.indexOf(b.id));
   assets = await Promise.all(images.map(restoreImage));
   const companyLogo = result.assets.find(asset => asset.id === project.logoId);
@@ -256,8 +271,34 @@ async function pilotAction(action, button) {
     await runTask('verify',async()=>{await api('/api/websites/verify',{method:'POST',body:{method:action==='website-dns'?'dns_txt':'https_file'}});websiteChallenge=null;cloud.status=await api('/api/status');toast('Genau diese Unternehmenswebsite wurde bestätigt.');});return true;
   }
   if(action==='founder-demo-create'){
-    const input={website:$('#founder-website')?.value,company:$('#founder-company')?.value,city:$('#founder-city')?.value,focus:$('#founder-focus')?.value,rightsAccepted:$('#founder-rights')?.checked===true};
-    await runTask('demo',async()=>{const result=await api('/api/founder/demo',{method:'POST',body:input});resetAssets();project=safeProject(result.project);upsert(cloud.companies,result.company);upsert(cloud.projects,result.project);projects=cloud.projects.map(safeProject);step=1;view='studio';toast('Private Founder-Demo vorbereitet. Bitte eigene autorisierte Fotos ergänzen.');});return true;
+    if (activeProduction()) {
+      toast('Warte auf den laufenden Filmauftrag, bevor du den Anbieter wechselst.');
+      return true;
+    }
+    await runTask('demo', async () => {
+      const input = { ...founderDraft };
+      if (!input.website?.trim() || !input.focus?.trim()) throw new Error('Bitte ergänze Website und Videowunsch.');
+      if (!input.rightsAccepted) throw new Error('Bitte bestätige die Autorisierung und Materialrechte für diese Demo.');
+      await saveBeforeProviderChange();
+      const result = await api('/api/founder/demo', { method: 'POST', body: input });
+      resetAssets();
+      resetPublicationFile();
+      workflowState.production = null;
+      websiteChallenge = null;
+      websiteProofUrl = '';
+      founderDraft = {};
+      project = safeProject(result.project);
+      project.cta = projectCallToAction(project);
+      upsert(cloud.companies, result.company);
+      upsert(cloud.projects, result.project);
+      projects = cloud.projects.map(safeProject);
+      productionMode = 'video';
+      step = 1;
+      view = 'studio';
+      player.time = 0;
+      toast('Private Demo vorbereitet. Prüfe Firmenname, Ort und Website.');
+    });
+    return true;
   }
   if(action==='billing-checkout'){
     const plan=$('#studio-plan')?.value;await runTask('billing',async()=>{const result=await api('/api/billing/checkout',{method:'POST',body:{plan}});if(new URL(result.url).origin!=='https://checkout.stripe.com')throw new Error('Ungültiger Zahlungslink.');location.assign(result.url);});return true;
@@ -278,6 +319,7 @@ async function pilotAction(action, button) {
     if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Nutzungsrechte und die KI-Übermittlung.');
     if (!project.confirmed || !project.focus.trim()) throw new Error('Bitte bestätige den Betrieb und ergänze deinen Videowunsch.');
     if(project.visualSource==='photos'&&!assets.length)throw new Error('Wähle eigene Fotos oder „Video aus Wunschtext“.');
+    project.cta = projectCallToAction(project);
     await saveCloudProject(false);
     const result = await api('/api/storyboard', { method: 'POST', body: {...safeProject(project),rightsAccepted:true}, billable: true });
     project = safeProject(result.project); upsert(cloud.projects, result.project); projects = cloud.projects.map(safeProject);
@@ -371,7 +413,8 @@ function briefingEditor() {
     <div class="production-modes" aria-label="Bildquelle"><button class="production-mode${project.visualSource==='generated'?' active':''}" data-action="visual-source" data-source="generated"><strong>Video aus Wunschtext</strong><small>Neue Personen, Räume und Motive erzeugen. Keine Fotos nötig.</small></button><button class="production-mode${project.visualSource==='photos'?' active':''}" data-action="visual-source" data-source="photos"><strong>Eure echten Fotos</strong><small>Eigene Bilder oder autorisierte Webseitenbilder verwenden.</small></button></div>
     ${project.visualSource==='generated'?'<div class="note">Beschreibe Personen, Gegenstände, Umgebung und Handlung konkret. Das Studio erzeugt eine gekennzeichnete KI-Inszenierung. Echte Betriebseinblicke benötigen eigenes Material.</div>':''}
     ${project.visualSource==='photos'?`<div class="visual-upload">${icon('image')}<div><strong>Eure Geschichte. Eure echten Bilder.</strong><p>Bis zu 4 Fotos · JPG, PNG, WebP · je 10 MB</p></div><button class="button secondary small" data-action="pick-images">Fotos wählen ${icon('plus')}</button></div>
-    ${cloud.status?.backendReady&&!project.demoOnly&&assets.length<4?'<button class="button secondary" data-action="website-images">Autorisierte Webseitenbilder übernehmen</button>':''}
+    ${cloud.status?.backendReady&&!project.demoOnly&&assets.length<4?'<button class="button secondary" data-action="website-images">Originalfotos von der Website übernehmen</button>':''}
+    ${hasOnlyWebsitePhotos(project)?'<p class="field-help">Für den Website-Film nutzt das Studio diese Originalfotos und die geprüften Textstellen aus der Recherche.</p>':''}
     ${assets.length ? `<div class="images-row">${assets.map((asset, i) => `<div class="image-tile"><img src="${esc(asset.url)}" alt="Unternehmensfoto ${i + 1}"><button data-action="remove-image" data-index="${i}" aria-label="Foto ${i + 1} entfernen">${icon('x')}</button></div>`).join('')}</div>` : ''}
     `:''}
     <div class="brand-row"><label for="brand-color">Deine Markenfarbe</label><input id="brand-color" data-field="color" type="color" value="${esc(project.color)}">${logo ? `<img src="${esc(logo.url)}" alt="Unternehmenslogo"><button class="button secondary small" data-action="remove-logo">Logo entfernen</button>` : '<button class="button secondary small" data-action="pick-logo">Logo hinzufügen</button>'}</div>
@@ -508,9 +551,30 @@ document.addEventListener('click', async event => {
   if (exportRunning) return toast('Der Export läuft. Änderungen sind danach wieder möglich.');
   const action = button.dataset.action;
   if (busy) return toast('Deine Aktion läuft noch.');
+  if (action === 'switch-provider' || action === 'new-founder-demo') {
+    if (activeProduction()) return toast('Warte auf den laufenden Filmauftrag, bevor du den Anbieter wechselst.');
+    if (action === 'switch-provider' && account.providers.length > 1) {
+      if (await runTask('save', saveBeforeProviderChange)) location.assign('/studio/');
+    } else if (action === 'new-founder-demo' && cloud.status?.security?.founder) {
+      founderDraft = {};
+      navigate('founder');
+    }
+    return;
+  }
   if(action==='export-studio'&&cloud.status?.production?.configured&&project.source==='ai_assisted'){try{await workflowAction({dataset:{action:'wf-download'}},workflowContext());}catch(error){toast(error.message);}return;}
   if(action.startsWith('wf-')){try{await workflowAction(button,workflowContext());}catch(error){toast(error.message);}return;}
-  if(action==='website-images'){await runTask('images',async()=>{if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Materialrechte.');await saveCloudProject(false);const result=await api('/api/websites/import',{method:'POST',body:{projectId:project.id,rightsAccepted:true},billable:true});await openProject(result.project.id);step=2;toast('Webseitenbilder privat gespeichert. Bitte prüfe die Motive.');});return;}
+  if(action==='website-images'){
+    if(activeProduction())return toast('Warte auf den laufenden Filmauftrag, bevor du Fotos ergänzt.');
+    await runTask('images',async()=>{
+      if(!project.aiRightsConfirmed)throw new Error('Bitte bestätige zuerst die Materialrechte.');
+      await saveCloudProject(false);
+      const result=await api('/api/websites/import',{method:'POST',body:{projectId:project.id,rightsAccepted:true},billable:true});
+      await openProject(result.project.id);
+      step=2;
+      toast(hasOnlyWebsitePhotos(project)?'Originalfotos übernommen. Der Fotoschnitt ist vorausgewählt.':'Webseitenfotos gespeichert. Bitte prüfe die Motive.');
+    });
+    return;
+  }
   if (await pilotAction(action, button)) return;
   if (['copy-ad-link', 'share-ad-link', 'download-qr-png', 'download-qr-svg', 'save-ad-reference'].includes(action)) {
     try {
@@ -596,15 +660,32 @@ document.addEventListener('submit', event => {
 
 document.addEventListener('input', event => {
   const element = event.target;
+  if (element.dataset.founderField) {
+    founderDraft[element.dataset.founderField] = element.type === 'checkbox' ? element.checked : element.value;
+    return;
+  }
   if ((exportRunning || busy || activeProduction()) && (element.dataset.field || element.dataset.scene)) return;
   if (element.dataset.field) {
     const key = element.dataset.field;
-    project[key] = key === 'duration' ? Number(element.value) : element.value;
+    const value = key === 'duration' ? Number(element.value) : element.value;
+    if (project[key] === value) return;
+    project[key] = value;
     if (['company','providerType','city','website','facts'].includes(key)) {
       project.confirmed = false; candidates = [];
       const confirm = $('#company-confirmed'); if (confirm) confirm.checked = false;
       researchShown = false;
       $('.research-result')?.remove();
+      if (project.founderDemo && (key === 'company' || key === 'city')) {
+        project.cta = projectCallToAction(project);
+        retryBaseJob = null;
+        retryScene = null;
+        project.visualBible = '';
+        project.requirements = [];
+        project.source = 'studio-ai-demo';
+        workflowState.production = null;
+        ++cutWatchSequence;
+        if (productionJob?.status === 'failed') productionJob = null;
+      }
     }
     invalidate();
     if (key !== 'color') project.scenes = [];
@@ -633,7 +714,6 @@ document.addEventListener('change', async event => {
     project.approved = event.target.checked; project.status = project.approved ? 'Geprüft' : 'Entwurf';
     render();
   }
-  if (event.target.id === 'company-picker') { if (busy || activeProduction()) return; const selected = cloud.companies.find(item => item.id === event.target.value); resetAssets(); project = newProviderProject();websiteChallenge=null;websiteProofUrl=''; if (selected) applyCompany(selected); step = 1; render(); }
   if(event.target.id==='production-music'){project.musicEnabled=event.target.checked;project.approved=false;resetPublicationFile();render();}
   if(event.target.id==='final-reviewed'){workflowState.reviewedRender=event.target.checked?workflowState.production?.renders?.[0]?.id:'';render();}
   if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; productionEstimate=null;render(); }
@@ -714,7 +794,10 @@ document.addEventListener('drop', event => {
   event.preventDefault(); $('#dropzone')?.classList.remove('dragging'); loadVideo(event.dataTransfer?.files?.[0]);
 });
 
-function activeScenes() { return project.scenes.length === 4 ? project.scenes : fallbackScenes; }
+function activeScenes() {
+  if (project.scenes.length === 4) return project.scenes;
+  return project.founderDemo ? demoFallbackScenes : fallbackScenes;
+}
 function activeDuration() { return view === 'upload' ? Number.isFinite(sourceVideo.duration) ? sourceVideo.duration : 0 : project.scenes.length ? project.duration : 20; }
 function activeLabel() { return needsAiLabel({ declaredContainsAi: view === 'upload' ? uploadContainsAi : false, provenance: view === 'upload' ? 'uploaded' : 'studio-ai-demo' }); }
 function formatTime(seconds) { const total = Math.max(0, Math.floor(seconds || 0)); return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0'); }
@@ -854,7 +937,7 @@ function paint() {
   }
   const current = getSceneAt(activeScenes(), player.time);
   const scene = current.scene;
-  const shownProject = project.scenes.length ? project : fallback;
+  const shownProject = project.scenes.length || project.founderDemo ? project : fallback;
   if (!scene) return;
   const generated = productionJob?.status === 'ready' && productionJob.mode === 'video' && mediaReady ? realMedia.current(activeScenes(), player.time, player.playing) : null;
   if (generated) fitImage(generated, 0, false);
@@ -862,9 +945,23 @@ function paint() {
   else drawWorkshop(current.index, current.progress);
   const shade = ctx.createLinearGradient(0, 400, 0, 1280); shade.addColorStop(0, '#07090800'); shade.addColorStop(.4, '#07090838'); shade.addColorStop(.73, '#070908d0'); shade.addColorStop(1, '#070908f8'); ctx.fillStyle = shade; ctx.fillRect(0, 0, 720, 1280);
   ctx.fillStyle = '#ffffff';
-  if (logo) { const image = logo.img; const scale = Math.min(170 / image.width, 90 / image.height); ctx.drawImage(image, 50, 122, image.width * scale, image.height * scale); }
-  else drawTextBlock(shownProject.company.toUpperCase(), 49, 146, 620, 26, 31, 2, '#ffffff', 700);
-  ctx.fillStyle = '#e0e5e1'; ctx.font = '500 18px "Segoe UI", Arial, sans-serif'; ctx.fillText(shownProject.city.toUpperCase().slice(0,35), 51, logo ? 225 : 221);
+  let nameX = 49;
+  if (logo) {
+    const image = logo.img;
+    const scale = Math.min(170 / image.width, 90 / image.height);
+    ctx.drawImage(image, 50, 122, image.width * scale, image.height * scale);
+    nameX += image.width * scale + 19;
+  }
+  if (!logo || shownProject.founderDemo) {
+    drawTextBlock(shownProject.company.toUpperCase(), nameX, 146, 669 - nameX, 26, 31, 2, '#ffffff', 700);
+  }
+  const city = shownProject.city.toUpperCase();
+  if (shownProject.founderDemo) {
+    drawTextBlock(city, 51, 225, 618, 18, 24, 2, '#e0e5e1', 500);
+  } else {
+    ctx.fillStyle = '#e0e5e1'; ctx.font = '500 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillText(city.slice(0, 35), 51, logo ? 225 : 221);
+  }
   ctx.save();
   const rise = current.progress < .15 ? 22 * (1 - current.progress / .15) : 0; ctx.translate(0, rise);
   roundedRect(49, 759, 57, 5, 2, project.color || '#B7FF3C');
@@ -873,11 +970,17 @@ function paint() {
   const bottom = drawTextBlock(headline, 48, 838, 620, size, size * 1.11, 3, '#ffffff', 600);
   drawTextBlock(scene.subtitle, 50, bottom + 16, 600, 25, 36, 3, '#d3dbd5', 400);
   ctx.restore();
-  const markLoaded = grvknLogo.complete && grvknLogo.naturalWidth > 0;
-  if (markLoaded) ctx.drawImage(grvknLogo, 49, 1168, 46, 46);
-  const brandX = markLoaded ? 108 : 49;
-  ctx.font = '700 18px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('GRVKN', brandX, 1187);
-  ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.fillText('Erstellt mit GRVKN Studio', brandX, 1214);
+  if (shownProject.founderDemo) {
+    ctx.font = '700 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(FOUNDER_DEMO_LABEL, 49, 1200);
+  } else {
+    const markLoaded = grvknLogo.complete && grvknLogo.naturalWidth > 0;
+    if (markLoaded) ctx.drawImage(grvknLogo, 49, 1168, 46, 46);
+    const brandX = markLoaded ? 108 : 49;
+    ctx.font = '700 18px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('GRVKN', brandX, 1187);
+    ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.fillText('Erstellt mit GRVKN Studio', brandX, 1214);
+  }
   ctx.font = '400 16px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#A7B0AA'; ctx.textAlign = 'right'; ctx.fillText('0' + (current.index + 1) + ' / 04', 669, 1200); ctx.textAlign = 'left';
   if (activeLabel()) drawAiLabel();
 }
