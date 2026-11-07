@@ -40,5 +40,18 @@
 .preview-products .card .button{margin-top:10px}
 .preview-details>h2{font-size:30px;line-height:1.2;margin-top:10px}
 .preview-details>h3{margin-top:28px}
+.upload-comparison{scroll-margin-top:24px}
+.upload-comparison h2{max-width:850px;line-height:1.25;margin-top:10px}
+.upload-comparison-table{overflow:hidden;border:1px solid var(--line);border-radius:14px;margin:22px 0}
+.upload-comparison table{width:100%;table-layout:fixed;border-collapse:collapse}
+.upload-comparison th,.upload-comparison td{width:50%;padding:14px 18px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.upload-comparison th{background:#1c2817;color:var(--lime);font-size:16px}
+.upload-comparison td{border-top:1px solid var(--line);font-size:15px}
+.upload-comparison th+th,.upload-comparison td+td{border-left:1px solid var(--line);background:#1b2717}
+.placement-benefit{border:1px solid #536b3d;border-radius:16px;padding:20px;margin:22px 0;background:#182314}
+.placement-benefit h3{font-size:20px;line-height:1.3;margin:10px 0}
+.placement-benefit p{font-size:15px}
+.placement-benefit a{display:inline-block;font-size:14px;margin-top:8px}
+@media(max-width:650px){.upload-comparison th,.upload-comparison td{padding:12px 10px;font-size:14px}.placement-benefit{padding:16px}}
 @media(max-width:850px){.placement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.preview-layout{grid-template-columns:1fr}.placement-figure{width:min(100%,390px);justify-self:center}.preview-details{max-width:620px;width:100%;justify-self:center}.placement-tabs .button{flex:1 0 38%}.placement-stage{min-height:570px}}
 @media(prefers-reduced-motion:no-preference){.placement-link{transition:background .15s,border-color .15s}}
