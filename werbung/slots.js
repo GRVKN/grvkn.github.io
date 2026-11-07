@@ -1,5 +1,14 @@
-import {api,safeLink} from './shared.js';
+import {api,safeLink,money} from './shared.js';
 import {prepareGoogleSlot} from './google.js';
+export function homepagePlaceholder(root,catalog={}){
+ const section=document.createElement('section');section.className='sponsor example';section.setAttribute('aria-label','Werbeplatz auf der Homepage · Beispiel');
+ const copy=document.createElement('div');copy.className='copy';const label=document.createElement('span');label.className='label';label.textContent='WERBEPLATZ · BEISPIEL';
+ const title=document.createElement('strong');title.textContent='Hier könnte dein Unternehmen stehen.';
+ const text=document.createElement('p');text.textContent='Zeig dein Angebot auf der GRVKN-Homepage. Dies ist eine Beispielansicht und keine laufende Kampagne.';
+ const plans=document.createElement('p');plans.className='label';plans.textContent=(catalog.products||[]).filter(p=>p.placements.includes('homepage')).map(p=>p.name+' · '+money(p.amountMinor)+' netto / '+p.days+' Tage').join(' · ');
+ copy.append(label,title,text,plans);const link=document.createElement('a');link.href=new URL('./?preview=homepage',import.meta.url).href;link.textContent='Platz & Pakete ansehen';section.append(copy,link);root.append(section);
+ return section;
+}
 export async function installHomepageAdvertising(){
  const mount=document.querySelector('[data-grvkn-ad-slot="homepage"]');if(!mount)return;
  const root=mount.attachShadow({mode:'open'});let viewTimer,seen=false;let campaign;
@@ -7,7 +16,7 @@ export async function installHomepageAdvertising(){
  try{
   const [catalog,delivery]=await Promise.all([api('/catalog'),api('/delivery?surface=homepage&region='+encodeURIComponent(mount.dataset.grvknRegion||'grafschaft-bentheim'))]);
   campaign=delivery.campaigns?.find(c=>c.placement==='homepage');
-  if(!campaign){if(catalog.google?.enabled){const google=document.createElement('div');google.className='grvkn-google-slot';google.style.cssText='max-width:1120px;margin:24px auto;min-height:100px';google.hidden=true;mount.after(google);prepareGoogleSlot(google,catalog.google);}return;}
+  if(!campaign){if(catalog.google?.enabled){const google=document.createElement('div');google.className='grvkn-google-slot';google.style.cssText='max-width:1120px;margin:24px auto;min-height:100px';google.hidden=true;mount.after(google);prepareGoogleSlot(google,catalog.google);}else homepagePlaceholder(root,catalog);return;}
   const section=document.createElement('section');section.className='sponsor';section.setAttribute('aria-label','Werbung von '+campaign.advertiser);
   const link=safeLink(campaign.targetUrl);if(!link)return;
   if(campaign.imageUrl){const img=document.createElement('img');img.src=campaign.imageUrl;img.alt='';img.loading='lazy';img.onerror=()=>img.remove();section.append(img);}
