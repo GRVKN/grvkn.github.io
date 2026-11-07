@@ -16,7 +16,7 @@ export async function installHomepageAdvertising(){
  try{
   const [catalog,delivery]=await Promise.all([api('/catalog'),api('/delivery?surface=homepage&region='+encodeURIComponent(mount.dataset.grvknRegion||'grafschaft-bentheim'))]);
   campaign=delivery.campaigns?.find(c=>c.placement==='homepage');
-  if(!campaign){if(catalog.google?.enabled){const google=document.createElement('div');google.className='grvkn-google-slot';google.style.cssText='max-width:1120px;margin:24px auto;min-height:100px';google.hidden=true;mount.after(google);prepareGoogleSlot(google,catalog.google);}else homepagePlaceholder(root,catalog);return;}
+  if(!campaign){if(catalog.google?.enabled&&catalog.google.siteOrigin===window.location.origin){const google=document.createElement('div');google.className='grvkn-google-slot';google.style.cssText='max-width:1120px;margin:24px auto;min-height:100px';google.hidden=true;mount.after(google);prepareGoogleSlot(google,catalog.google);}else homepagePlaceholder(root,catalog);return;}
   const section=document.createElement('section');section.className='sponsor';section.setAttribute('aria-label','Werbung von '+campaign.advertiser);
   const link=safeLink(campaign.targetUrl);if(!link)return;
   if(campaign.imageUrl){const img=document.createElement('img');img.src=campaign.imageUrl;img.alt='';img.loading='lazy';img.onerror=()=>img.remove();section.append(img);}
