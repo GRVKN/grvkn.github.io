@@ -7,6 +7,7 @@ import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
 import { account, studioOwner } from './client.js';
 import { publishing, publicationMarkup, studioPublicationMarkup, publishCurrent, setPublicationFile, resetPublicationFile, readPublicationInputs, prepareReplacement } from './publisher.js';
+import {mountAlice} from '../alice/widget.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = escapeHtml;
@@ -59,6 +60,20 @@ const demoFallbackScenes = buildStoryboard({
   ...createProject(), founderDemo: true, company: 'Demo-Anbieter', city: 'Ort offen',
   focus: 'Hier entsteht dein Demo-Film.'
 });
+
+const alice=mountAlice({client:account.client,provider:account.provider,surface:'studio',
+ getContext:()=>({projectId:project.id,saved:cloud.projects.some(p=>p.id===project.id),brief:{focus:project.focus,goal:project.goal,duration:project.duration}}),
+ prepareContext:async({forResearch})=>{if(forResearch){if(busy||exportRunning||activeProduction())throw Error('Warte bitte, bis der laufende Studio-Auftrag fertig ist.');if(project.demoOnly)throw Error('Die Webseitenanalyse braucht einen eigenen gespeicherten Entwurf.');await saveCloudProject(false);}},
+ onNavigate:target=>navigate(({studio_create:'studio',studio_overview:'overview',studio_upload:'upload',studio_projects:'projects',studio_campaigns:'campaigns',studio_settings:'settings'})[target]),
+ onApply:async draft=>{
+  if(busy||exportRunning||activeProduction())throw Error('Ein laufender Filmauftrag kann nicht durch einen neuen Vorschlag geändert werden.');
+  project.focus=draft.focus;if(GOALS.includes(draft.goal))project.goal=draft.goal;if([20,40,60].includes(draft.duration))project.duration=draft.duration;
+  invalidate();project.scenes=[];project.approved=false;view='studio';step=project.confirmed?2:1;render();
+  if(cloud.ready&&!project.demoOnly&&project.company&&project.city)await saveCloudProject(false);
+  toast('Alices Videowunsch ist übernommen. Prüfe Angaben und Quellen, bevor du ein Storyboard oder eine Produktion startest.');
+ }
+});
+window.addEventListener('pagehide',()=>alice.destroy(),{once:true});
 
 function workflowContext(){return {run:fn=>runTask('workflow',fn),project:()=>project,job:()=>productionJob,open:openProject,save:()=>saveCloudProject(false),download,toast,useFilm:(blob,renderId)=>{setPublicationFile(blob,'studio',true);publishing.renderId=renderId;step=4;view='studio';toast('Gespeicherten Film übernommen. Ergänze die Angaben für die Moderation.');}};}
 
@@ -1116,6 +1131,11 @@ void connectWorkspace().then(() => {
     if (!cloud.status.connections.runway) productionMode = 'photos';
   }
   render();
+  const params=new URL(location.href).searchParams;
+  const requested=params.get('aliceView');if(['overview','studio','upload','projects','campaigns','settings'].includes(requested))navigate(requested);
+  const draft=params.get('aliceDraft');if(draft&&/^[a-zA-Z0-9_-]{8,120}$/.test(draft)){
+   void alice.loadDraft(draft);
+  }
 });
 
 function chooseOwnAd(value) {
