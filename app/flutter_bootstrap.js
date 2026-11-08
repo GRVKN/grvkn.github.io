@@ -42,7 +42,7 @@ _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a57
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
     const bundle = new URL(build.mainJsPath, document.baseURI);
-    bundle.searchParams.set('grvkn-release', 'grvkn-dutch-20261108-r1');
+    bundle.searchParams.set('grvkn-release', 'grvkn-crossborder-20261108-r1');
     build.mainJsPath = bundle.href;
   }
 }
