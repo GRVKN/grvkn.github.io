@@ -37,6 +37,16 @@ if (!window._flutter) {
 _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}],"useLocalCanvasKit":true};
 
 
+// Give the program bundle the same release identity as this bootstrap. A new
+// bootstrap alone does not invalidate an HTTP-cached main.dart.js file.
+for (const build of _flutter.buildConfig.builds) {
+  if (build.mainJsPath) {
+    const bundle = new URL(build.mainJsPath, document.baseURI);
+    bundle.searchParams.set('grvkn-release', 'alice-part2-portrait-20261108-r2');
+    build.mainJsPath = bundle.href;
+  }
+}
+
 // Retire only this app's legacy offline worker. Stale cached Flutter bundles
 // otherwise keep serving old feed controls after a production release.
 (async () => {
