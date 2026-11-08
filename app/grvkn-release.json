@@ -1,9 +1,9 @@
 {
   "version": "0.13.1+33",
-  "release": "alice-companion-part2-20261108",
-  "sourceCommit": "15a56bb7cef135ffb61a5807d4d3c7ee14b37394",
-  "verifiedCommit": "a0791f239b2c395dfc9018f049bcfd9aa0f4937c",
-  "verifiedWorkflowRun": 42458035676,
-  "verifiedArtifact": 13608696509,
-  "preparedAt": "2026-11-08T07:21:55.238664+00:00"
+  "release": "alice-companion-part2-portrait-20261108",
+  "sourceCommit": "58a899d8708c00e20aef87b680b3e9816d64756a",
+  "verifiedCommit": "03aaa01ce330511cd2177cc12d2447da9875db32",
+  "verifiedWorkflowRun": 42460846290,
+  "verifiedArtifact": 13609622689,
+  "preparedAt": "2026-11-08T08:03:25.562388+00:00"
 }
