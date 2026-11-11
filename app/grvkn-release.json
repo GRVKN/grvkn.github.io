@@ -1,9 +1,9 @@
 {
   "version": "0.14.1+35",
-  "release": "grvkn-crossborder-20261108-r1",
-  "sourceCommit": "dec83f5e3a418c9582b24dc9cf5ebe277f60692d",
-  "verifiedCommit": "f3d28df9306154fde48902b0823c7e4fd50c8dea",
-  "verifiedWorkflowRun": 42486957922,
-  "verifiedArtifact": 13619858045,
-  "preparedAt": "2026-11-08T13:57:05.973Z"
+  "release": "grvkn-alice2-20261111-r1",
+  "sourceCommit": "ff73c58dbd4274bf50aa1f984cbde7b43bc440f1",
+  "verifiedCommit": "f5e79e48a7d97b6dbffea23bd7537450b33225bd",
+  "verifiedWorkflowRun": 43104777463,
+  "verifiedArtifact": 13894825333,
+  "preparedAt": "2026-11-11"
 }

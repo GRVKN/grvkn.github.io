@@ -1,3 +1,4 @@
+import {audioSettings} from './audio.js';
 import {escapeHtml as esc} from './core.js';
 import {api} from './cloud.js';
 import {studioSecurityView} from './security-view.js';
@@ -7,7 +8,7 @@ export function matchingFailedDraft(project,job){
 }
 const orderedValue=value=>Array.isArray(value)?value.map(orderedValue):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,orderedValue(value[key])])):value;
 export function matchingOutput(project,render,jobId=''){
- return Boolean(render?.status==='ready'&&render.project_id===project.id&&(!jobId||render.job_id===jobId)&&['id','company','city','website','duration','assetIds','visualSource','visualBible','color','musicEnabled','logoId','scenes'].every(k=>JSON.stringify(orderedValue(render.snapshot[k]))===JSON.stringify(orderedValue(project[k]))));
+ return Boolean(render?.status==='ready'&&render.project_id===project.id&&(!jobId||render.job_id===jobId)&&['id','company','city','website','duration','assetIds','visualSource','visualBible','color','musicEnabled','voiceId','voiceStyle','voiceLanguage','voiceVolume','musicGenre','musicVolume','logoId','scenes'].every(k=>JSON.stringify(orderedValue(({...render.snapshot,...audioSettings(render.snapshot)})[k]))===JSON.stringify(orderedValue(({...project,...audioSettings(project)})[k]))));
 }
 const states={planned:'Geplant',researching:'Website wird vorbereitet',storyboarding:'Storyboard wird erstellt',awaiting_storyboard:'Storyboard prüfen',approved:'Produktion bestätigt',producing:'Film wird produziert',awaiting_video:'Fertigen Film prüfen',approved_video:'Bereit zur Einreichung',changes_requested:'Änderungen angefragt',skipped:'Diese Woche übersprungen',expired:'Angebot abgelaufen',blocked:'Deine Mithilfe ist nötig',submitted:'Zur Moderation eingereicht'};
 const date=s=>new Date(s).toLocaleString('de-DE',{timeZone:'Europe/Berlin',dateStyle:'medium',timeStyle:'short'});

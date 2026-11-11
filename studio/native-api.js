@@ -28,7 +28,7 @@ export async function nativeApi(path, { method = 'GET', body, headers = {} } = {
   // Protected actions always use the authenticated server, including during setup.
   if (backendReady || ['websites','rights','founder','billing','campaigns','production','renders','reviews'].includes(route)) return null;
   // All billed requests use the authenticated server. There is no client-side AI key.
-  if (['discover', 'research', 'storyboard', 'estimate', 'jobs'].includes(route)) return null;
+  if (['discover', 'research', 'storyboard', 'estimate', 'voice-preview', 'jobs'].includes(route)) return null;
   if (method !== 'GET') await refreshProvider();
   if (route === 'workspace') {
     if (backendReady) return null;

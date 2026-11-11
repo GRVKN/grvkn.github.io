@@ -1,3 +1,4 @@
+import {audioSettings,createMusicWav} from './audio.js';
 import { AI_LABEL, FOUNDER_DEMO_LABEL, CATEGORIES, GOALS, needsAiLabel, normalizeWebsite, escapeHtml, createProject, exampleProject, buildStoryboard, getSceneAt, safeProject, hasOnlyWebsitePhotos, projectCallToAction, projectManifest, selectRecorderMime } from './core.js';
 import { cloud, api, connectWorkspace, uploadImage, restoreImage } from './cloud.js';
 import { companyView, storyboardView, exportView, settingsView } from './views.js';
@@ -40,6 +41,7 @@ let productionJob = null;
 let productionMode = 'video';
 let productionVoice = true;
 let costConsent = false;
+let audioPreviewState=null,audioPreviewUrl='',audioPreviewPlayer;
 let productionEstimate = null;
 let retryBaseJob = null;
 let retryScene = null;
@@ -64,6 +66,7 @@ const demoFallbackScenes = buildStoryboard({
 const alice=mountAlice({client:account.client,provider:account.provider,surface:'studio',
  getContext:()=>({projectId:project.id,saved:cloud.projects.some(p=>p.id===project.id),brief:{focus:project.focus,goal:project.goal,duration:project.duration}}),
  prepareContext:async({forResearch})=>{if(forResearch){if(busy||exportRunning||activeProduction())throw Error('Warte bitte, bis der laufende Studio-Auftrag fertig ist.');if(project.demoOnly)throw Error('Die Webseitenanalyse braucht einen eigenen gespeicherten Entwurf.');await saveCloudProject(false);}},
+ onProject:async id=>{await connectWorkspace();await openProject(id);},
  onNavigate:target=>navigate(({studio_create:'studio',studio_overview:'overview',studio_upload:'upload',studio_projects:'projects',studio_campaigns:'campaigns',studio_settings:'settings'})[target]),
  onApply:async draft=>{
   if(busy||exportRunning||activeProduction())throw Error('Ein laufender Filmauftrag kann nicht durch einen neuen Vorschlag geändert werden.');
@@ -82,7 +85,7 @@ function pilotState() {
   const finalReady=matchingOutput(project,finalOutput,productionJob?.id);
   return { project, cloud, assets, logo, expandedScene, busy, candidates,websiteChallenge,websiteProofUrl,founderDraft,
     canSwitchProvider: account.providers.length > 1, profileLocked: activeProduction(), job: productionJob,finalOutput,finalReady,
-    productionMode, voice: productionVoice, costConsent, productionEstimate, retryBaseJob, retryScene, finalReviewed:workflowState.reviewedRender===finalOutput?.id,mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
+    productionMode, voice: productionVoice, costConsent, audioPreview:audioPreviewState, productionEstimate, retryBaseJob, retryScene, finalReviewed:workflowState.reviewedRender===finalOutput?.id,mediaReady, mediaError: realMedia.loadError, exportRunning, progress: progressMarkup() };
 }
 function activeProduction() { return Boolean(productionJob && ['reserving', 'queued', 'processing', 'needs_review'].includes(productionJob.status)); }
 function updateConnectionNotice() {
@@ -729,7 +732,7 @@ document.addEventListener('change', async event => {
     project.approved = event.target.checked; project.status = project.approved ? 'Geprüft' : 'Entwurf';
     render();
   }
-  if(event.target.id==='production-music'){project.musicEnabled=event.target.checked;project.approved=false;resetPublicationFile();render();}
+  if(event.target.dataset.audio||event.target.id==='production-music'){const k=event.target.dataset.audio;if(k)project[k]=['voiceVolume','musicVolume'].includes(k)?Number(event.target.value):event.target.value;else project.musicEnabled=event.target.checked;productionEstimate=null;costConsent=false;workflowState.reviewedRender='';resetPublicationFile();await saveCloudProject(false);render();}
   if(event.target.id==='final-reviewed'){workflowState.reviewedRender=event.target.checked?workflowState.production?.renders?.[0]?.id:'';render();}
   if (event.target.id === 'production-voice') { productionVoice = event.target.checked; costConsent = false; productionEstimate=null;render(); }
   if (event.target.id === 'cost-consent') { costConsent = event.target.checked; render(); }
@@ -1132,6 +1135,7 @@ void connectWorkspace().then(() => {
   }
   render();
   const params=new URL(location.href).searchParams;
+  const linked=params.get('project');if(linked&&cloud.projects.some(p=>p.id===linked))void openProject(linked);
   const requested=params.get('aliceView');if(['overview','studio','upload','projects','campaigns','settings'].includes(requested))navigate(requested);
   const draft=params.get('aliceDraft');if(draft&&/^[a-zA-Z0-9_-]{8,120}$/.test(draft)){
    void alice.loadDraft(draft);
@@ -1181,3 +1185,13 @@ publishing.beforeSubmit=async ticket=>{
 };
 const reviewToken=new URLSearchParams(location.hash.replace(/^#/,'' )).get('review');
 if(reviewToken){history.replaceState(null,'',location.pathname+location.search);void (async()=>{await new Promise(resolve=>{const check=()=>cloud.ready||cloud.error?resolve():setTimeout(check,100);check();});try{const result=await api('/api/reviews/resolve',{method:'POST',body:{token:reviewToken}});await openProject(result.slot.project_id);}catch(error){toast(error.message);navigate('campaigns');}})();}
+
+document.addEventListener('click',async event=>{
+ const action=event.target.closest('[data-audio-preview]')?.dataset.audioPreview;if(!action)return;
+ audioPreviewPlayer?.pause();if(audioPreviewUrl)URL.revokeObjectURL(audioPreviewUrl);
+ if(action==='music'){audioPreviewUrl=URL.createObjectURL(new Blob([createMusicWav(8,project.musicGenre)],{type:'audio/wav'}));audioPreviewState={url:audioPreviewUrl,label:'Kostenlose Originalmusik-Hörprobe',projectId:project.id,signature:JSON.stringify(audioSettings(project))};render();return;}
+ const reserve=cloud.status?.audio?.previewReserveUsd;if(!Number.isFinite(reserve))return toast('Lade zuerst den aktuellen Kostenstatus.');
+ if(!window.confirm('Echte KI-Stimmprobe erzeugen? Dafür werden bis zu '+reserve.toFixed(2)+' USD innerhalb deines bestehenden Kontingents reserviert. Die Produktion wird nicht gestartet.'))return;
+ await runTask('voice-preview',async()=>{await saveCloudProject(false);await api('/api/rights/consent',{method:'POST',body:{projectId:project.id,accepted:project.aiRightsConfirmed===true}});const result=await api('/api/voice-preview',{method:'POST',body:{projectId:project.id,costConsent:true,rightsAccepted:true,audio:audioSettings(project)},billable:true});const response=await apiAsset(result.asset.id);audioPreviewUrl=URL.createObjectURL(response);audioPreviewState={url:audioPreviewUrl,label:'KI-Stimmprobe · '+project.voiceId+' · '+project.voiceLanguage,projectId:project.id,signature:JSON.stringify(audioSettings(project))};toast('Deine Stimmprobe ist gespeichert. Starte die Wiedergabe im Audioplayer.');});
+});
+async function apiAsset(id){const {backendFetch}=await import('./native-api.js');const r=await backendFetch('/api/assets/'+encodeURIComponent(id));if(!r.ok)throw Error('Die gespeicherte Stimmprobe konnte nicht geladen werden.');return r.blob();}

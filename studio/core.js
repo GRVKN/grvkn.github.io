@@ -1,4 +1,5 @@
 import { normalizeAdId, publicAdLink, providerType } from './grvkn.js';
+import {audioSettings} from './audio.js';
 export const AI_LABEL = 'Mit KI generiert';
 export const FOUNDER_DEMO_LABEL = 'INTERNE DEMO · FIKTIVES SZENARIO';
 export const FOUNDER_DEMO_CTA = 'Lerne den Betrieb kennen';
@@ -32,7 +33,7 @@ export function createProject() {
     id: globalThis.crypto?.randomUUID?.() ?? 'project-' + Date.now(),
     name: '', company: '', city: '', website: '', facts: '', confirmed: false,
     goal: 'Unternehmen vorstellen', category: 'Handwerk', focus: '', cta: DEFAULT_CTA,
-    duration: 20, musicEnabled: true, visualSource: 'generated', visualBible: '', requirements: [], websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
+    duration: 20, musicEnabled: true, ...audioSettings(), visualSource: 'generated', visualBible: '', requirements: [], websiteImageSources: [], style: 'Warm & nahbar', color: '#B7FF3C', scenes: [], approved: false,
     updatedAt: new Date().toISOString(), status: 'Entwurf', source: 'studio-ai-demo',
     companyId: '', assetIds: [], logoId: '', demoOnly: false, founderDemo:false,aiRightsConfirmed:false,providerType: 'business', grvknAdId: ''
   };
@@ -104,11 +105,12 @@ export function safeProject(input) {
   for (const [key, limit] of Object.entries(limits)) if (typeof input[key] === 'string') clean[key] = input[key].slice(0, limit);
   clean.goal = GOALS.includes(input.goal) ? input.goal : clean.goal;
   clean.category = CATEGORIES.includes(input.category) ? input.category : clean.category;
-  clean.duration = [15, 20, 30].includes(Number(input.duration)) ? Number(input.duration) : clean.duration;
+  clean.duration = [15, 20, 30, 40, 60].includes(Number(input.duration)) ? Number(input.duration) : clean.duration;
   clean.color = /^#[0-9a-f]{6}$/i.test(clean.color) ? clean.color : '#B7FF3C';
   clean.confirmed = input.confirmed === true;
   clean.approved = input.approved === true;
   clean.musicEnabled = input.musicEnabled !== false;
+  Object.assign(clean,audioSettings(input));
   clean.visualSource = input.visualSource === 'photos' || (!input.visualSource && input.assetIds?.length) ? 'photos' : 'generated';
   clean.visualBible = String(input.visualBible || '').slice(0, 600);
   clean.requirements = Array.isArray(input.requirements) ? input.requirements.slice(0, 12).map(r => ({text: String(r?.text || '').slice(0, 180), scene: Math.max(0, Math.min(3, Number(r?.scene) || 0))})).filter(r => r.text) : [];
