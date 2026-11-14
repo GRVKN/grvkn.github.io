@@ -1,3 +1,4 @@
+import {expressionMarkup} from './expressions.js';
 // Existing portraits only. The state controller does not claim facial animation
 // or lip sync. Device speech has no GRVKN audio API charge and uploads no raw
 // audio to GRVKN; the OS/browser recognizer may use its own online service.
@@ -8,7 +9,7 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
  const supported=()=>typeof window.SpeechRecognition==='function'||typeof window.webkitSpeechRecognition==='function';
  function visual(){return state==='speaking'&&mood==='serious'?'serious':state==='idle'?mood:state;}
  function set(next){if(!ALICE_POSES[next])next='idle';state=next;const stage=root?.querySelector('.alice-stage');if(!stage)return;
-  stage.dataset.state=state;const old=stage.querySelector('img:last-of-type'),src='/alice/assets/alice-'+ALICE_POSES[visual()]+'.webp';
+  stage.dataset.state=state;const expression=stage.querySelector('.alice-expression');if(expression)expression.outerHTML=expressionMarkup(visual());const old=stage.querySelector('img:last-of-type'),src='/alice/assets/alice-'+ALICE_POSES[visual()]+'.webp';
   if(old?.getAttribute('src')===src)return;const img=document.createElement('img');img.src=src;img.alt='Alice · KI-generierte GRVKN-Assistentin';img.className='pose entering';stage.append(img);
   requestAnimationFrame(()=>{img.classList.remove('entering');old?.classList.add('leaving');});setTimeout(()=>old?.remove(),650);
  }
@@ -44,7 +45,7 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
    }void lease;
   }catch(error){await finish();set('idle');onError(error.message);}finally{starting=false;}
  }
- function avatarMarkup(){return `<figure class="alice-stage" data-state="${state}"><img class="pose" src="/alice/assets/alice-${ALICE_POSES[visual()]||'seated'}.webp" alt="Alice · KI-generierte GRVKN-Assistentin"><figcaption>${state==='listening'?'🎙 Alice hört zu …':state==='thinking'?'Alice denkt nach …':'Deine KI-Assistentin'}</figcaption></figure>`;}
+ function avatarMarkup(){return `<figure class="alice-stage" data-state="${state}"><img class="pose" src="/alice/assets/alice-${ALICE_POSES[visual()]||'seated'}.webp" alt="Alice · KI-generierte GRVKN-Assistentin">${expressionMarkup(visual())}<figcaption>${state==='listening'?'🎙 Alice hört zu …':state==='thinking'?'Alice denkt nach …':'Deine KI-Assistentin'}</figcaption></figure>`;}
  function controlsMarkup(){return `<div class="voice-controls">${state==='listening'?'<button type="button" id="voice-stop">Aufnahme beenden</button><button type="button" id="voice-cancel" class="quiet">Abbrechen</button>':`<button type="button" id="voice-mic" class="quiet" ${starting||!status().allowed?'disabled':''}>🎙 Diktieren</button>`}${state==='speaking'?'<button type="button" id="voice-pause" class="quiet">Pause</button><button type="button" id="voice-stop" class="quiet">Stopp</button>':''}${state==='paused'?'<button type="button" id="voice-resume" class="quiet">Weiter vorlesen</button><button type="button" id="voice-stop" class="quiet">Stopp</button>':''}</div>`;}
  function keyboard(){const panel=root?.querySelector('.panel'),viewport=window.visualViewport;if(!panel||!viewport)return;const active=viewport.height<window.innerHeight*.76;panel.classList.toggle('keyboard-open',active);panel.style.maxHeight=active?Math.max(200,viewport.height-85)+'px':'';}
  window.visualViewport?.addEventListener('resize',keyboard);
@@ -56,3 +57,4 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
  return {get expanded(){return expanded;},get state(){return state;},set,emotion,avatarMarkup,controlsMarkup,bind,speak,stop,activate(value){enabled=value;if(!value)void stop();},reset(){accountEpoch++;lastText=remaining=prefix='';mood='idle';playfulAt=turn=0;void stop();},
   async maybeSpeak(reply){emotion(reply?.emotion);if(prefs().voiceOutput&&reply?.message)await speak(reply.message);},destroy(){destroyed=true;accountEpoch++;lastText=remaining=prefix='';document.removeEventListener('visibilitychange',visibility);window.visualViewport?.removeEventListener('resize',keyboard);void stop();root=null;}};
 }
+

@@ -34,7 +34,7 @@ addEventListener("message", eventListener);
 if (!window._flutter) {
   window._flutter = {};
 }
-_flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js?v=grvkn-alice2-20261111-r1"}],"useLocalCanvasKit":true};
+_flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}],"useLocalCanvasKit":true};
 
 
 // Give the program bundle the same release identity as this bootstrap. A new
@@ -42,7 +42,7 @@ _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a57
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
     const bundle = new URL(build.mainJsPath, document.baseURI);
-    bundle.searchParams.set('grvkn-release', 'grvkn-alice2-20261111-r1');
+    bundle.searchParams.set('grvkn-release', 'grvkn-crossborder-20261108-r1');
     build.mainJsPath = bundle.href;
   }
 }
