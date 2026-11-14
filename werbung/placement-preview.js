@@ -1,4 +1,5 @@
 import {escapeHtml as esc, money} from './shared.js';
+import {houseAdMarkup} from './house-ad.js';
 
 export const placementPreviews = [
   {code:'app_launch', query:'launch', title:'Beim Öffnen der App', short:'App-Start', description:'Dein Sponsorplatz erscheint zusammen mit der GRVKN-Begrüßung. Besucher können direkt zur App weitergehen.', benefit:'Dein Betrieb wird zusätzlich als Sponsor in der App-Begrüßung gezeigt. Dieser Platz gehört nicht zum normalen Videoupload.'},
@@ -23,8 +24,8 @@ function placementBenefit(selected) {
   return `<aside class="placement-benefit" aria-labelledby="placement-benefit-title"><span class="eyebrow">Zusätzlich zum normalen Upload</span><h3 id="placement-benefit-title">Was du mit diesem Platz zusätzlich buchst</h3><p>${esc(selected.benefit)}</p><p class="muted"><small>Der normale Upload ist für freigegebene Anbieter während der Pilotphase kostenlos. Mit dem Werbepaket buchst du diesen zusätzlichen Platz für eine festgelegte Laufzeit. Die Erstellung eines neuen KI-Videos im GRVKN Studio ist eine separate Leistung.</small></p><a href="./#upload-vergleich">Upload und Werbeplatz im Vergleich →</a></aside>`;
 }
 
-function creative(video = false) {
-  return `<div class="sample-ad"><span class="badge">Werbung · Beispielbetrieb</span>${video?'<div class="sample-video" aria-hidden="true"><span>▶</span><small>Dein freigegebenes Video</small></div>':''}<h3>Hier könnte dein Angebot stehen.</h3><p>Zeig, was deinen Betrieb in der Region besonders macht.</p><span class="button sample-button">Deine Zielseite →</span></div>`;
+function creative() {
+  return `<div class="sample-ad house-ad">${houseAdMarkup({preview:true})}</div>`;
 }
 
 function stage(code) {
@@ -39,3 +40,4 @@ export function placementPreview(catalog, query = 'launch') {
   const products = productsForPlacement(catalog, selected.code);
   return `<div class="intro"><span class="eyebrow">Werbeplatz-Vorschau</span><h1>Hier könnte deine Werbung stehen.</h1><p>Wähle einen Platz und sieh dir an, mit welchem Paket du dort vertreten sein kannst.</p></div><nav class="placement-tabs" aria-label="Werbeplatz auswählen">${placementPreviews.map(p=>`<a class="button ${p===selected?'':'secondary'}" href="?preview=${p.query}"${p===selected?' aria-current="page"':''}>${p.short}</a>`).join('')}</nav><section class="preview-layout" aria-labelledby="preview-title"><figure class="placement-figure">${stage(selected.code)}<figcaption>Schematische Beispielansicht · keine laufende Kampagne</figcaption></figure><div class="preview-details"><span class="eyebrow">${selected===placementPreviews[3]?'Website':'In der App'}</span><h2 id="preview-title">${esc(selected.title)}</h2><p>${esc(selected.description)}</p>${placementBenefit(selected)}<h3>Mit diesen Paketen möglich</h3><div class="preview-products">${products.length?products.map(p=>`<article class="card"><h3>${esc(p.name)}</h3><p><strong>${money(p.amountMinor)} netto</strong> / ${Number(p.days)} Kalendertage</p><p class="muted">Enthalten: ${p.placements.map(code=>esc(catalog.placements?.find(x=>x.code===code)?.name||code)).join(' · ')}</p><a class="button secondary" href="?product=${encodeURIComponent(p.code)}#anfrage">Dieses Paket unverbindlich anfragen</a></article>`).join(''):'<p class="notice">Für diesen Platz ist aktuell kein Paket verfügbar.</p>'}</div><p class="muted"><small>Richtpreise aus dem aktuellen Werbekatalog. Verfügbarkeit, Umsatzsteuer und verbindliches Angebot nach Prüfung. Region, Nutzung, Laufzeit und Partnerrotation bestimmen die tatsächliche Ausspielung. Es wird keine Reichweite garantiert.</small></p><p class="notice">Du siehst Beispielwerbung. Hier wird keine Anzeige ausgespielt und keine Einblendung oder Klick für eine Kampagne gezählt.</p><a href="./">Alle Pakete und Werbeanfragen →</a></div></section>`;
 }
+

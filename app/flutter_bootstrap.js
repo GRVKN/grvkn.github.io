@@ -42,7 +42,7 @@ _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a57
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
     const bundle = new URL(build.mainJsPath, document.baseURI);
-    bundle.searchParams.set('grvkn-release', 'grvkn-alice-expressions-20261114-r2');
+    bundle.searchParams.set('grvkn-release', 'grvkn-houseads-20261114-r3');
     build.mainJsPath = bundle.href;
   }
 }
