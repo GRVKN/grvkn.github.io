@@ -12,6 +12,7 @@ export const VIDEO_VOICE_STYLES=[
  {id:'friendly',name:'Freundlich',instruction:'Warm, friendly and conversational; natural rather than theatrical.'},
  {id:'calm',name:'Ruhig',instruction:'Calm, relaxed and reassuring, with clear articulation.'},
  {id:'dynamic',name:'Dynamisch',instruction:'Energetic, confident and lively, without shouting.'},
+ {id:'rock',name:'Rock / Power',instruction:'Confident rock-frontwoman delivery: energetic, punchy and rhythmically driven, with a slightly smoky, gritty vocal color and clear articulation. Speak the script; do not sing, scream or imitate any performer.'},
  {id:'serious',name:'Seriös',instruction:'Measured, professional and factual, with restrained emphasis.'},
  {id:'advertising',name:'Werblich',instruction:'Inviting and engaging, with a warm advertising cadence and no exaggerated emphasis.'},
 ];
@@ -19,6 +20,7 @@ export const VIDEO_MUSIC=[
  {id:'pop',name:'Modern / Pop',bpm:112,chords:[[48,52,55],[45,48,52],[41,45,48],[43,47,50]],pattern:[0,1,2,1,0,2,1,2],drums:.13,pluck:.21,pad:.06,bass:.12},
  {id:'lounge',name:'Entspannt / Lounge',bpm:88,chords:[[48,52,55,59],[45,48,52,55],[41,45,48,52],[43,47,50,53]],pattern:[0,2,1,3,2,1,3,2],drums:.055,pluck:.16,pad:.10,bass:.10},
  {id:'sport',name:'Dynamisch / Sportlich',bpm:128,chords:[[45,48,52],[41,45,48],[48,52,55],[43,47,50]],pattern:[0,0,2,1,0,2,2,1],drums:.21,pluck:.14,pad:.035,bass:.17},
+ {id:'rock',name:'Rock / Power',bpm:132,chords:[[40,47,52],[43,50,55],[38,45,50],[45,52,57]],pattern:[0,0,1,0,2,1,0,1],drums:.22,pluck:0,pad:0,bass:.15},
  {id:'cinematic',name:'Emotional / Cinematic',bpm:70,chords:[[45,48,52,59],[41,45,48,55],[48,52,55,62],[43,47,50,57]],pattern:[0,1,2,3,2,1,0,2],drums:0,pluck:.10,pad:.19,bass:.09},
  {id:'corporate',name:'Seriös / Corporate',bpm:102,chords:[[48,52,55],[43,47,50],[45,48,52],[41,45,48]],pattern:[0,2,1,2,0,1,2,1],drums:.08,pluck:.19,pad:.07,bass:.10},
  {id:'family',name:'Fröhlich / Familie',bpm:116,chords:[[60,64,67],[65,69,72],[62,65,69],[67,71,74]],pattern:[0,2,1,0,2,1,2,0],drums:.075,pluck:.20,pad:.035,bass:.07},
@@ -48,6 +50,7 @@ export function createMusicWav(seconds,genre='lounge') {
  ascii(0,'RIFF');v.setUint32(4,36+count*2,true);ascii(8,'WAVE');ascii(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ascii(36,'data');v.setUint32(40,count*2,true);
  const beat=60/p.bpm,hz=m=>440*2**((m-69)/12);
+ let previousGuitar=0,guitarHighpass=0;
  for(let i=0;i<count;i++) {
   const t=i/rate,b=t/beat,chord=p.chords[Math.floor(b/4)%4],bt=t%beat,part=t%(beat/2),step=Math.floor(b*2),f=hz(chord[p.pattern[step%8]%chord.length]+12);
   const fade=Math.max(0,Math.min(1,t/.6,(seconds-t)/1.2)),decay=genre==='acoustic'?7:genre==='christmas'?4:6;
@@ -55,7 +58,19 @@ export function createMusicWav(seconds,genre='lounge') {
   const pad=chord.reduce((sum,n)=>sum+Math.sin(2*Math.PI*hz(n)*t),0)/chord.length,bass=Math.sin(2*Math.PI*hz(chord[0]-12)*t)*(.65+.35*Math.exp(-bt*8));
   const kick=Math.sin(2*Math.PI*(45*bt+20*(1-Math.exp(-bt*30))/30))*Math.exp(-bt*20),noise=(Math.sin(i*12.9898)*43758.5453)%1;
   const drums=kick+.15*noise*Math.exp(-part*110)+.20*noise*Math.exp(-bt*30)*(Math.floor(b)%2),bell=genre==='christmas'?Math.sin(2*Math.PI*f*4*t)*Math.exp(-part*12)*.075:0;
-  v.setInt16(44+i*2,Math.round(Math.max(-.95,Math.min(.95,(p.pluck*pluck+p.pad*pad+p.bass*bass+p.drums*drums+bell)*fade))*32767),true);
+  let mix=p.pluck*pluck+p.pad*pad+p.bass*bass+p.drums*drums+bell;
+  if(genre==='rock') {
+   // Original power chords and palm-muted eighth-note riff; no external recordings.
+   const strum=chord.reduce((sum,n,j)=>{const phase=2*Math.PI*hz(n)*(t-j*.0008);return sum+Math.sin(phase)+.30*Math.sin(phase*3)+.12*Math.sin(phase*5);},0)/chord.length;
+   const driven=Math.tanh(strum*4.5);guitarHighpass=driven-previousGuitar+.96*guitarHighpass;previousGuitar=driven;
+   const riff=guitarHighpass*(1-Math.exp(-part*800))*Math.exp(-part*8)*(step%8===3||step%8===6?1:.76);
+   const barBeat=Math.floor(b)%4,rockKick=(barBeat===0||barBeat===2?kick:0),snare=barBeat%2?noise*Math.exp(-bt*22)+.22*Math.sin(2*Math.PI*180*bt)*Math.exp(-bt*30):0;
+   const hats=noise*Math.exp(-part*100),crash=noise*Math.exp(-(t%(beat*8))*5);
+   const lead=t>seconds*.7?Math.sin(2*Math.PI*hz(chord[p.pattern[step%8]%chord.length]+24)*t)*Math.exp(-part*9)*.035:0;
+   mix=.25*riff+.15*bass+.24*rockKick+.13*snare+.04*hats+.025*crash+lead;
+  }
+  v.setInt16(44+i*2,Math.round(Math.max(-.95,Math.min(.95,mix*fade))*32767),true);
  }
  return bytes;
 }
+
