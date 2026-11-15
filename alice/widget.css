@@ -21,3 +21,12 @@
 
 
 .alice-stage .alice-expression{position:absolute;right:18px;top:16px;width:112px;height:112px;background-size:300% 200%;border-radius:50%;border:2px solid #a9c98b;box-shadow:0 8px 28px #0004;background-color:#10180f}.alice-stage .alice-expression[data-expression=thinking]{animation:alice-breathe 2.4s ease-in-out infinite}@media(max-width:480px){.alice-stage .alice-expression{width:92px;height:92px;right:12px;top:10px}}@media(prefers-reduced-motion:reduce){.alice-stage .alice-expression{animation:none!important}}
+
+/* The movable launcher never determines the position of the open chat. */
+.studio-movable>.launcher{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.studio-movable>.launcher img{pointer-events:none;-webkit-user-drag:none}
+.launcher-grip{color:#b7cc9d;font-size:20px;line-height:1;margin-left:2px}
+.studio-movable.launcher-dragging>.launcher{cursor:grabbing;box-shadow:0 8px 30px #0009;outline:2px solid #b7ff3c;outline-offset:2px}
+.studio-movable.launcher-positioned{right:auto;bottom:auto}
+.studio-movable .panel{position:fixed;right:12px;bottom:12px}
+
