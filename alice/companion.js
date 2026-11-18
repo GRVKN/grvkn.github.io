@@ -5,9 +5,11 @@ export async function deviceVoices(synthesis){
  if(synthesis.getVoices().length)return synthesis.getVoices();
  return new Promise(resolve=>{let timer;const finish=()=>{clearTimeout(timer);synthesis.removeEventListener?.('voiceschanged',finish);resolve(synthesis.getVoices());};synthesis.addEventListener?.('voiceschanged',finish,{once:true});timer=setTimeout(finish,1200);});
 }
+export function recognitionMessage(code){return ({'not-allowed':'Der Mikrofonzugriff ist gesperrt. Erlaube das Mikrofon in den Website-Einstellungen deines Browsers und starte erneut.','service-not-allowed':'Die Spracherkennung ist in diesem Browser nicht freigegeben. Nutze einen unterstützten Browser oder den Textchat.','audio-capture':'Es wurde kein verfügbares Mikrofon gefunden. Prüfe dein Mikrofon und ob eine andere App darauf zugreift.',network:'Die Spracherkennung hat die Verbindung verloren. Dein erkannter Text bleibt erhalten. Prüfe die Verbindung und starte erneut.','no-speech':'Ich habe noch keinen Satz verstanden. Starte das Mikrofon noch einmal.','language-not-supported':'Die gewählte Sprache wird von der Spracherkennung dieses Browsers nicht unterstützt.'})[code]||'Die Spracherkennung wurde unterbrochen. Dein erkannter Text bleibt zum Bearbeiten erhalten.';}
 export function createCompanion({request,getStatus,onRefresh,onChange,onWords,getText,onSubmit,onError}={}){
  let root,expanded=true,enabled=false,state='idle',session=null,timer,recognition,utterance,audio,audioUrl,lastText='',lastTurn='',remaining='',prefix='',generation=0,accountEpoch=0,starting=false,playfulAt=0,turn=0,destroyed=false,mood='idle',dialogue=false,listenTimer;
  const cache=new Map(),keys=new Map(),status=()=>getStatus()||{},prefs=()=>status().preferences||{},cloud=()=>prefs().voiceEngine==='cloud';
+ let leasePending=null;
  const supported=()=>typeof window.SpeechRecognition==='function'||typeof window.webkitSpeechRecognition==='function';
  function visual(){return state==='speaking'&&mood==='serious'?'serious':state==='idle'?mood:state;}
  function set(next){if(!ALICE_POSES[next])next='idle';state=next;const stage=root?.querySelector('.alice-stage');if(!stage)return;
@@ -18,7 +20,7 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
  function emotion(value){turn++;if(value==='playful'){if(turn-playfulAt<12){mood='idle';return set('idle');}playfulAt=turn;}mood=['happy','serious','playful','surprised'].includes(value)?value:'idle';if(!['speaking','listening','paused'].includes(state))set('idle');}
  async function finish(){const previous=session;session=null;clearTimeout(timer);if(!previous)return;try{await request('voice/'+previous+'/finish',{method:'POST',body:{}});await onRefresh();}catch{} }
  function releaseAudio(){if(audio){audio.onended=audio.onplaying=audio.onerror=null;audio.pause();audio.removeAttribute('src');audio.load?.();audio=null;}if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=null;}
- async function stop({discard=false,keepDialogue=false,keepPosition=false}={}){const own=++generation,wasListening=state==='listening';clearTimeout(listenTimer);if(!keepDialogue)dialogue=false;
+ async function stop({discard=false,keepDialogue=false,keepPosition=false,keepStarting=false}={}){const own=++generation,wasListening=state==='listening';if(!keepStarting)starting=false;clearTimeout(listenTimer);if(!keepDialogue)dialogue=false;
   if(recognition){recognition.onend=recognition.onresult=recognition.onerror=null;recognition.abort();recognition=null;}
   window.speechSynthesis?.cancel();utterance=null;if(!keepPosition){remaining='';releaseAudio();}else audio?.pause();
   await finish();if(own!==generation)return;if(discard&&wasListening)onWords(prefix);set('idle');if(!destroyed)onChange();
@@ -34,8 +36,14 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
   await request('preferences',{method:'POST',body:{voiceConsent:true}});await onRefresh();return true;
  }
  const valid=(command,account)=>enabled&&!destroyed&&!document.hidden&&command===generation&&account===accountEpoch;
- async function begin(kind,command,account){const value=await request('voice',{method:'POST',body:{kind}});session=value.id;if(!valid(command,account)){await finish();return false;}
-  timer=setTimeout(()=>{if(kind==='output')void pause();else void stop();},value.maxSeconds*1000);return true;
+ async function begin(kind,command,account){
+  // Serialize lease creation; an interrupted, late response closes only its own lease.
+  const previous=leasePending;
+  const pending=(async()=>{if(previous)await previous.catch(()=>{});if(!valid(command,account))return false;
+   const value=await request('voice',{method:'POST',body:{kind}});
+   if(!valid(command,account)){await request('voice/'+value.id+'/finish',{method:'POST',body:{}}).catch(()=>{});return false;}
+   session=value.id;timer=setTimeout(()=>{if(kind==='output')void pause();else{dialogue=false;void stop();onError('Die Aufnahmezeit ist beendet. Dein erkannter Text bleibt erhalten; du kannst ihn senden oder weiter diktieren.');}},value.maxSeconds*1000);return true;
+  })();leasePending=pending;try{return await pending;}finally{if(leasePending===pending)leasePending=null;}
  }
  function nextListen(){if(!dialogue||!enabled||document.hidden)return;clearTimeout(listenTimer);listenTimer=setTimeout(()=>{if(dialogue)void listen({conversation:true});},450);}
  async function ended(command){if(command!==generation)return;await finish();if(command!==generation||destroyed)return;remaining='';set('idle');onChange();nextListen();}
@@ -67,37 +75,39 @@ export function createCompanion({request,getStatus,onRefresh,onChange,onWords,ge
    u.onerror=()=>{if(command!==generation)return;dialogue=false;void stop();onError('Die Gerätestimme ist gerade nicht verfügbar. Wähle die KI-Stimme oder lies im Textchat weiter.');};window.speechSynthesis.speak(u);
   }chunk();
  }
- async function speak(text,{resume=false,turnId=''}={}){if(starting)return;starting=true;const account=accountEpoch;
-  try{await stop({keepDialogue:true,keepPosition:resume});const command=generation;if(!valid(command,account)||!await consent('output')||!valid(command,account))return;
+ async function speak(text,{resume=false,turnId=''}={}){if(starting)return;starting=true;const account=accountEpoch,command=generation+1;
+  try{await stop({keepDialogue:true,keepPosition:resume,keepStarting:true});if(!valid(command,account)||!await consent('output')||!valid(command,account))return;
    lastText=text;lastTurn=turnId||lastTurn;remaining=resume&&remaining?remaining:text;
    if(cloud())await playCloud(command,account,{resume});else await playDevice(command,account);
-  }catch(error){await finish();dialogue=false;set('idle');onError(error.message);}finally{starting=false;if(!destroyed)onChange();}
+  }catch(error){if(command===generation&&account===accountEpoch){await finish();dialogue=false;set('idle');onError(error.message);}}finally{if(command===generation)starting=false;if(!destroyed)onChange();}
  }
  async function pause(){if(!['speaking','thinking'].includes(state))return;dialogue=false;clearTimeout(listenTimer);utterance?.pauseAt?.();const own=++generation;window.speechSynthesis?.cancel();audio?.pause();await finish();if(own!==generation)return;set('paused');onChange();}
- async function listen({conversation=false}={}){if(starting)return;starting=true;const account=accountEpoch;
-  try{await stop({keepDialogue:conversation});const command=generation;if(!valid(command,account)||!await consent('input')||!valid(command,account))return;
+ async function listen({conversation=false}={}){if(starting)return;starting=true;const account=accountEpoch,command=generation+1;
+  try{await stop({keepDialogue:conversation,keepStarting:true});if(!valid(command,account)||!await consent('input')||!valid(command,account))return;
    if(!supported())throw Error('Dein Browser bietet keine Spracherkennung an. Tippe deine Nachricht; Alice kann sie weiterhin mit Stimme beantworten.');
    if(!await begin('input',command,account))return;
-   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition,r=new Recognition();recognition=r;r.lang=prefs().language||'de-DE';r.interimResults=true;r.continuous=false;prefix=getText();let finalWords='';
+   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition,r=new Recognition();recognition=r;r.lang=prefs().language||'de-DE';r.interimResults=true;r.continuous=false;prefix=getText();let finalWords='',didEnd=false;
    r.onresult=event=>{if(!valid(command,account))return;let words='';finalWords='';for(const result of Array.from(event.results)){words+=result[0].transcript+' ';if(result.isFinal)finalWords+=result[0].transcript+' ';}onWords((prefix+' '+words).trim());};
-   r.onend=()=>{if(command!==generation)return;recognition=null;void finish().then(()=>{if(!valid(command,account))return;set('idle');onChange();if(dialogue&&finalWords.trim()){onWords((prefix+' '+finalWords).trim());onSubmit?.();}else if(dialogue){dialogue=false;onChange();}});};
-   r.onerror=event=>{if(command!==generation)return;dialogue=false;void stop();onError(event.error==='no-speech'?'Ich habe nichts verstanden. Starte das Mikrofon noch einmal.':'Die Spracherkennung ist nicht freigegeben oder gerade nicht erreichbar. Der Textchat bleibt verfügbar.');};
+   r.onend=()=>{if(command!==generation||didEnd)return;didEnd=true;recognition=null;void finish().then(()=>{if(!valid(command,account))return;set('idle');onChange();if(dialogue&&finalWords.trim()){onWords((prefix+' '+finalWords).trim());onSubmit?.();}else if(dialogue){dialogue=false;onError('Der Satz wurde noch nicht vollständig erkannt. Prüfe den Text oder starte das Mikrofon erneut.');onChange();}});};
+   r.onerror=event=>{if(command!==generation)return;dialogue=false;void stop();onError(recognitionMessage(event.error));};
    r.onstart=()=>{if(valid(command,account)){set('listening');onChange();}};r.start();
-  }catch(error){await finish();dialogue=false;set('idle');onError(error.message);}finally{starting=false;if(!destroyed)onChange();}
+  }catch(error){if(command===generation&&account===accountEpoch){await finish();dialogue=false;set('idle');onError(error.message);}}finally{if(command===generation)starting=false;if(!destroyed)onChange();}
  }
+ async function interrupt(){const conversation=dialogue,revision=generation+1;await stop({keepDialogue:conversation});if(revision===generation&&enabled&&!destroyed&&!document.hidden)await listen({conversation});}
  async function startDialogue(){if(dialogue)return void stop();if(getText().trim()){onError('Sende oder leere zuerst deinen Text, bevor du das Sprachgespräch startest.');return;}
   if(!window.confirm('Im Sprachgespräch wird dein fertig erkannter Satz automatisch als Chatnachricht gesendet. Danach spricht Alice und das Mikrofon hört wieder zu. Du kannst jederzeit beenden. Produktionen und Freigaben bestätigst du weiter separat. Starten?'))return;
   try{if(!await consent('output'))return;dialogue=true;await listen({conversation:true});}catch(error){dialogue=false;onError(error.message);}
  }
  function avatarMarkup(){return '<figure class="alice-stage" data-state="'+state+'"><img class="pose" src="/alice/assets/alice-'+(ALICE_POSES[visual()]||'seated')+'.webp" alt="Alice · KI-generierte GRVKN-Assistentin">'+expressionMarkup(visual())+'<figcaption>'+(state==='listening'?'🎙 Alice hört zu …':state==='thinking'?'Alice bereitet die Antwort vor …':state==='speaking'?'Alice spricht · KI-Stimme':state==='paused'?'Vorlesen pausiert':'Deine KI-Assistentin')+'</figcaption></figure>';}
- function controlsMarkup(){return '<div class="voice-controls">'+(state==='listening'?'<button type="button" id="voice-finish">Satz beenden</button><button type="button" id="voice-cancel" class="quiet">Abbrechen</button>':'<button type="button" id="voice-mic" class="quiet" '+(starting||!status().allowed?'disabled':'')+'>🎙 Diktieren</button>')+'<button type="button" id="voice-dialogue" class="quiet" aria-pressed="'+dialogue+'" '+(starting||!status().allowed?'disabled':'')+'>'+(dialogue?'Sprachgespräch beenden':'Sprachgespräch starten')+'</button>'+(state==='speaking'?'<button type="button" id="voice-pause" class="quiet">Pause</button>':'')+(state==='paused'?'<button type="button" id="voice-resume" class="quiet">Weiter vorlesen</button>':'')+(['speaking','thinking','paused'].includes(state)?'<button type="button" id="voice-stop" class="quiet">Stopp</button>':'')+'</div>'+(dialogue?'<p class="muted" role="status">Sprachgespräch aktiv · fertige Sätze werden gesendet. Beim Schließen oder App-Wechsel endet es.</p>':'');}
+ function controlsMarkup(){return '<div class="voice-controls">'+(state==='listening'?'<button type="button" id="voice-finish">Satz beenden</button><button type="button" id="voice-cancel" class="quiet">Abbrechen</button>':'<button type="button" id="voice-mic" class="quiet" '+(starting||!status().allowed?'disabled':'')+'>🎙 Diktieren</button>')+'<button type="button" id="voice-dialogue" class="quiet" aria-pressed="'+dialogue+'" '+(starting||!status().allowed?'disabled':'')+'>'+(dialogue?'Sprachgespräch beenden':'Sprachgespräch starten')+'</button>'+(state==='speaking'?'<button type="button" id="voice-pause" class="quiet">Pause</button>':'')+(state==='paused'?'<button type="button" id="voice-resume" class="quiet">Weiter vorlesen</button>':'')+(['speaking','thinking','paused'].includes(state)?'<button type="button" id="voice-interrupt" class="quiet">Unterbrechen & sprechen</button><button type="button" id="voice-stop" class="quiet">Stopp</button>':'')+'</div>'+(dialogue?'<p class="muted" role="status">Sprachgespräch aktiv · fertige Sätze werden gesendet. Beim Schließen oder App-Wechsel endet es.</p>':'');}
  function keyboard(){const panel=root?.querySelector('.panel'),viewport=window.visualViewport;if(!panel||!viewport)return;const active=viewport.height<window.innerHeight*.76;panel.classList.toggle('keyboard-open',active);panel.style.maxHeight=active?Math.max(200,viewport.height-85)+'px':'';}
  window.visualViewport?.addEventListener('resize',keyboard);
  function visibility(){if(document.hidden)void stop();}document.addEventListener('visibilitychange',visibility);
  function bind(nextRoot){root=nextRoot;keyboard();root.querySelector('#avatar-toggle')?.addEventListener('click',()=>{expanded=!expanded;onChange();});
+  root.querySelector('#voice-interrupt')?.addEventListener('click',()=>void interrupt());
   root.querySelector('#voice-mic')?.addEventListener('click',()=>void listen());root.querySelector('#voice-dialogue')?.addEventListener('click',()=>void startDialogue());root.querySelector('#voice-finish')?.addEventListener('click',()=>recognition?.stop());root.querySelector('#voice-stop')?.addEventListener('click',()=>void stop());root.querySelector('#voice-cancel')?.addEventListener('click',()=>void stop({discard:true}));root.querySelector('#voice-pause')?.addEventListener('click',()=>void pause());root.querySelector('#voice-resume')?.addEventListener('click',()=>void speak(lastText,{resume:true,turnId:lastTurn}));
  }
- return {get expanded(){return expanded;},get state(){return state;},get dialogue(){return dialogue;},set,emotion,avatarMarkup,controlsMarkup,bind,speak,stop,activate(value){enabled=value;if(!value)void stop();},reset(){accountEpoch++;lastText=lastTurn=remaining=prefix='';cache.clear();keys.clear();mood='idle';playfulAt=turn=0;void stop();},
+ return {get expanded(){return expanded;},get state(){return state;},get dialogue(){return dialogue;},get revision(){return generation;},set,emotion,avatarMarkup,controlsMarkup,bind,speak,stop,listen,startDialogue,interrupt,activate(value){enabled=value;if(!value)void stop();},reset(){accountEpoch++;lastText=lastTurn=remaining=prefix='';cache.clear();keys.clear();mood='idle';playfulAt=turn=0;void stop();},
   async maybeSpeak(reply,turnId){emotion(reply?.emotion);if((prefs().voiceOutput||dialogue)&&reply?.message)await speak(reply.message,{turnId});else nextListen();},destroy(){destroyed=true;accountEpoch++;cache.clear();keys.clear();lastText=lastTurn=remaining=prefix='';document.removeEventListener('visibilitychange',visibility);window.visualViewport?.removeEventListener('resize',keyboard);void stop();root=null;}};
 }
 

@@ -7,7 +7,7 @@ import { ProductionMedia } from './media.js';
 import { readAdReference, providerType } from './grvkn.js';
 import { sharingView, qrSvg, qrPng } from './sharing.js';
 import { account, studioOwner } from './client.js';
-import { publishing, publicationMarkup, studioPublicationMarkup, publishCurrent, setPublicationFile, resetPublicationFile, readPublicationInputs, prepareReplacement } from './publisher.js';
+import { publishing, publicationState, publicationStatusMarkup, publicationMarkup, studioPublicationMarkup, publishCurrent, setPublicationFile, resetPublicationFile, readPublicationInputs, prepareReplacement } from './publisher.js';
 import {mountAlice} from '../alice/widget.js';
 
 const $ = selector => document.querySelector(selector);
@@ -18,7 +18,7 @@ let projects = [];
 try { const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); if (Array.isArray(items)) projects = items.slice(0, 30).map(safeProject); } catch {}
 const newProviderProject = () => Object.assign(createProject(), { company: account.business.name, companyId: `${account.provider.business_id}_${account.user.id}`, providerType: account.provider.provider_type, city: account.locations[0]?.city || '', website: cloud.status?.security?.website?.url || account.business.website_url || '', facts: account.business.description || '' });
 let project = newProviderProject();
-let view = 'studio';
+let view = 'overview';
 let step = 1;
 let expandedScene = 0;
 let researchShown = false;
@@ -64,7 +64,7 @@ const demoFallbackScenes = buildStoryboard({
 });
 
 const alice=mountAlice({client:account.client,provider:account.provider,surface:'studio',
- getContext:()=>({projectId:project.id,saved:cloud.projects.some(p=>p.id===project.id),brief:{focus:project.focus,goal:project.goal,duration:project.duration}}),
+ getContext:()=>({projectId:project.id,saved:cloud.projects.some(p=>p.id===project.id),brief:{focus:project.focus,goal:project.goal,duration:project.duration,view,step,month:workflowState.month,localUpload:view==='upload'?{title:publishing.draft.title||'',description:publishing.draft.description||'',phase:publishing.phase}:null}}),
  prepareContext:async({forResearch})=>{if(forResearch){if(busy||exportRunning||activeProduction())throw Error('Warte bitte, bis der laufende Studio-Auftrag fertig ist.');if(project.demoOnly)throw Error('Die Webseitenanalyse braucht einen eigenen gespeicherten Entwurf.');await saveCloudProject(false);}},
  onProject:async id=>{await connectWorkspace();await openProject(id);},
  onNavigate:target=>navigate(({studio_create:'studio',studio_overview:'overview',studio_upload:'upload',studio_projects:'projects',studio_campaigns:'campaigns',studio_settings:'settings'})[target]),
@@ -450,17 +450,23 @@ function studioExportEditor() {
 function uploadEditor() {
   const max = uploadFile && sourceVideo.duration > 60;
   const audioCapture = typeof sourceVideo.captureStream === 'function' || typeof sourceVideo.mozCaptureStream === 'function';
-  return `<div class="editor-inner"><div class="section-top"><h2>Dein Video. Klar gekennzeichnet.</h2><span class="pill">VIDEO VORBEREITEN</span></div><p class="section-description">Wähle ein vorhandenes Video. Wenn es KI-Inhalte enthält, setzt dein Studio den Hinweis automatisch in Vorschau und Export.</p>
+  return `<div class="editor-inner"><div class="section-top"><h2>Dein Video veröffentlichen.</h2><span class="pill">ERST PRÜFEN, DANN FREIGEBEN</span></div><p class="section-description">Handy raus, filmen, hier auswählen. Ergänze die Angaben und reiche den geprüften Film ein. Aus Fotos kannst du im Bereich „Inhalte erstellen“ einen Film gestalten.</p><div class="upload-stage-status">${publicationStatusMarkup()}</div>
     ${!uploadFile ? `<button class="dropzone" data-action="pick-video" id="dropzone">${icon('upload')}<strong>Zieh dein Video hier hinein.</strong><p>Oder wähle eine Datei von deinem Gerät.</p><span class="button primary small">Video auswählen ${icon('plus')}</span><p>MP4, WebM, MOV oder OGG · bis 100 MB</p></button>` : `<div class="selected-file">${icon('film')}<div><strong>${esc(uploadFile.name)}</strong><p>${(uploadFile.size / 1048576).toFixed(1)} MB · ${Number.isFinite(sourceVideo.duration) ? sourceVideo.duration.toFixed(1) + ' Sekunden' : 'Wird geladen …'}</p></div><button data-action="remove-video" aria-label="Video entfernen">${icon('x')}</button></div>`}
+    ${uploadFile?`<video class="upload-local-preview" src="${esc(uploadUrl)}" controls playsinline preload="metadata" aria-label="Ausgewähltes Video"></video>`:'<button class="button secondary" data-view="studio">Aus eigenen Bildern ein Video erstellen</button>'}
     <div class="upload-toggle"><label class="checkline"><input id="upload-ai" type="checkbox"${uploadContainsAi ? ' checked' : ''}><strong>Enthält KI-Inhalte</strong></label><p>Bei gesetztem Häkchen erscheint „${AI_LABEL}“ fest oben im Video. Das Label bleibt auch im Export sichtbar.</p></div>
     <div class="note">${icon('info')} Bei KI-Inhalten exportierst du zuerst die Fassung mit festem Hinweis. Ohne KI-Inhalte kannst du die geprüfte Originaldatei mit ihrem Ton direkt einreichen.</div>
-    ${uploadFile ? `<div style="margin-top:19px"><label class="checkline"><input id="upload-approved" type="checkbox"${uploadApproved ? ' checked' : ''}><span>Ich habe das Video und die Kennzeichnung geprüft.</span></label></div><div class="export-options"><button class="button primary" id="export-upload" data-action="export-upload"${!uploadApproved || max || exportRunning || !Number.isFinite(sourceVideo.duration) ? ' disabled' : ''}>${icon('download')}Video exportieren</button></div><p class="field-help" style="margin-top:10px">${max ? 'Der lokale Export ist auf 60 Sekunden begrenzt. Die Vorschau zeigt das komplette Video.' : audioCapture ? 'Originalton wird übernommen, wenn der Browser eine Audiospur bereitstellt. Format: MP4 oder WebM.' : 'Dieser Browser unterstützt hier keinen Originalton-Export. Der Export ist ohne Ton.'}</p>` : ''}${progressMarkup()}${publicationMarkup(Boolean(publishing.blob && publishing.mode === 'upload'))}
+    ${uploadFile ? `<div style="margin-top:19px"><label class="checkline"><input id="upload-approved" type="checkbox"${uploadApproved ? ' checked' : ''}><span>Ich habe das Video und die Kennzeichnung geprüft.</span></label></div><details class="upload-export"${uploadContainsAi?' open':''}><summary>${uploadContainsAi?'Gekennzeichnete Fassung exportieren':'Optional: Video exportieren'}</summary><div class="export-options"><button class="button primary" id="export-upload" data-action="export-upload"${!uploadApproved || max || exportRunning || !Number.isFinite(sourceVideo.duration) ? ' disabled' : ''}>${icon('download')}Video exportieren</button></div><p class="field-help" style="margin-top:10px">${max ? 'Videos dürfen höchstens 60 Sekunden lang sein.' : audioCapture ? 'Originalton wird übernommen, wenn der Browser eine Audiospur bereitstellt. Format: MP4 oder WebM.' : 'Dieser Browser unterstützt hier keinen Originalton-Export. Der Export ist ohne Ton.'}</p></details>` : ''}${progressMarkup()}${publicationMarkup(Boolean(uploadFile || publishing.blob && publishing.mode === 'upload'))}
     <div class="editor-actions"><button class="button secondary" data-view="sharing">${icon('qr')}Link & QR zum GRVKN-Beitrag</button><span class="pill soft">LOKALE VORBEREITUNG</span></div></div>`;
 }
 
 function progressMarkup() {
   if (!exportState) return '';
   return `<div class="progress-box" role="status"><strong id="export-message">${esc(exportState.message)}</strong><p id="export-detail">${esc(exportState.detail || '')}</p><div class="progress-track"><span id="export-progress" style="width:${Math.min(100, exportState.progress || 0)}%"></span></div></div>`;
+}
+
+function projectsOverview(){
+  const status={draft:'Entwurf',pending:'Zur Prüfung eingereicht',active:'Veröffentlicht',rejected:'Abgelehnt',paused:'Pausiert',archived:'Archiviert'};
+  return `<section class="workflow-panel"><h2>Deine Beiträge</h2><p>Hier siehst du den tatsächlichen Status deiner eingereichten Videos.</p><div class="project-grid">${account.ads.map(ad=>`<article class="project-card"><div class="project-content"><span class="pill">${esc(status[ad.status]||ad.status)}</span><h3>${esc(ad.title)}</h3><p>${esc(ad.description||'')}</p>${ad.rejection_reason?`<p>Rückmeldung: ${esc(ad.rejection_reason)}</p>`:''}<div class="project-actions"><button class="button secondary" data-action="own-ad-sharing" data-id="${esc(ad.id)}">Link & QR / Beitrag</button></div></div></article>`).join('')||'<p>Noch keine Beiträge eingereicht. Lade ein fertiges Video hoch oder erstelle eines im Studio.</p>'}</div><button class="button primary" data-view="upload">Inhalt veröffentlichen</button></section><section class="workflow-panel"><h2>Entwürfe & Produktionen</h2><p>${cloud.jobs.filter(j=>['queued','processing','reserving'].includes(j.status)).length} laufende Produktionen. Öffne ein Projekt für den aktuellen Film und den Produktionsstatus.</p>${renderProjects()}</section>`;
 }
 
 function renderProjects() {
@@ -472,15 +478,18 @@ function conceptMarkup() {
 }
 
 function render() {
+  const focused=document.activeElement?.dataset?.publish;
+  const selection=focused?{start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;
+  readPublicationInputs();
   const meta = {
     overview:['Studio-Übersicht','DEIN GRVKN STUDIO','Deine Region. Dein nächster Film.','Projekte, Monatsplanung und Freigaben an einem Ort.'],
-    campaigns:['Monatskampagnen','EINMAL PLANEN','Deine Angebote. Woche für Woche.','Du bestätigst die Inhalte. Das Studio bereitet die nächsten Wochen vor.'],
+    campaigns:['Monatsplan','EINMAL PLANEN','Deine Angebote. Woche für Woche.','Du bestätigst die Inhalte. Das Studio bereitet die nächsten Wochen vor.'],
     quota:['Generierungskontingent','VERBRAUCH IM BLICK','Bewusst produzieren.','Kontingent und API-Kosten für deinen Anbieterzugang.'],
     subscription:['Studio-Abonnement','DEIN KI-PAKET','Dein Studio-Tarif.','Unabhängig von GRVKN Business und deinem normalen Video-Upload.'],
     founder:['Founder Demo Mode','AUTORISIERTE INTERNE DEMOS','Dein privater Vorführraum.','Externe Webseiten nur mit Autorisierung. Demos bleiben privat.'],
-    studio: ['Video erstellen', 'VON DER IDEE ZUM AUFTRITT', 'Deine Region. Dein Video.', 'Zeig, was euch ausmacht. Dein Studio macht euch sichtbar.'],
-    upload: ['Video hochladen', 'DEIN VIDEO AUF GRVKN', 'Zeig, was bei dir passiert.', 'Dein Video bekommt die passende Kennzeichnung. Ganz automatisch.'],
-    projects: ['Meine Entwürfe', 'DEIN KREATIVER VORRAT', 'Ideen, die bleiben.', 'Hier findest du deine gespeicherten Storyboards und Entwürfe.'],
+    studio: ['Inhalte erstellen', 'VON DER IDEE ZUM AUFTRITT', 'Deine Region. Dein Video.', 'Eigene Bilder, Webseite oder Wunschtext – du prüfst jeden Produktionsschritt.'],
+    upload: ['Inhalte veröffentlichen', 'DEIN VIDEO AUF GRVKN', 'Zeig, was bei dir passiert.', 'Video auswählen, Angaben ergänzen und zur Prüfung einreichen.'],
+    projects: ['Meine Projekte', 'ALLES IM BLICK', 'Deine Inhalte. Dein Überblick.', 'Entwürfe, Produktionen und eingereichte oder veröffentlichte Beiträge.'],
     sharing: ['Link & QR', 'DEIN VIDEO WEITERGEBEN', 'Ein Video. Viele Wege.', 'Beitragslink kopieren, teilen und QR-Code für den Druck herunterladen.'],
     settings: ['Mein Studio', 'DEIN PRIVATES PILOT-STUDIO', 'Alles bereit für eure Geschichten?', 'Betriebe, API-Zugänge und Produktionskontingente im Blick.'],
     concept: ['So funktioniert’s', 'GRVKN STUDIO · PRODUKTKONZEPT', 'Eine Idee. Ein klarer Weg.', 'So entsteht euer Video im Pilot-Studio.']
@@ -501,7 +510,7 @@ function render() {
   if (view === 'studio') $('#editor').innerHTML = [companyEditor, briefingEditor, storyboardEditor, studioExportEditor][step - 1]();
   if (view === 'upload') $('#editor').innerHTML = uploadEditor();
   if(['overview','campaigns','quota','subscription','founder'].includes(view))$('#standalone').innerHTML=workflowView(view,pilotState());
-  if (view === 'projects') $('#standalone').innerHTML = renderProjects();
+  if (view === 'projects') $('#standalone').innerHTML = projectsOverview();
   if (view === 'concept') $('#standalone').innerHTML = conceptMarkup();
   if (view === 'settings') $('#standalone').innerHTML = settingsView(pilotState());
   if (view === 'sharing') $('#standalone').innerHTML = `<div class="ad-picker field"><span>Deine GRVKN-Videos</span><select id="own-ad"><option value="">Video auswählen</option>${account.ads.filter(ad => ad.video_url).map(ad => `<option value="${esc(ad.id)}"${project.grvknAdId === ad.id ? ' selected' : ''}>${esc(ad.title)} · ${esc(ad.status === 'active' ? 'Veröffentlicht' : ad.status === 'pending' ? 'In Prüfung' : ad.status)}</option>`).join('')}</select><p class="field-help">Der öffentliche Link zeigt dein Video nach der Moderationsfreigabe. Beim Ersetzen bleiben Link und QR gleich.</p></div>` + sharingView({ reference: project.grvknAdId ? readAdReference(project.grvknAdId) : null, savedAdId: project.grvknAdId, canSave: Boolean(project.company.trim()) && !project.demoOnly });
@@ -514,6 +523,7 @@ function render() {
   $('#connection-notice').hidden = view === 'sharing';
   syncPreviewUi();
   paint();
+  if(focused){const input=document.querySelector(`[data-publish="${CSS.escape(focused)}"]`);if(input&&!input.disabled){input.focus({preventScroll:true});try{input.setSelectionRange(selection.start,selection.end);}catch{}}}
 }
 
 function invalidate() {
@@ -527,9 +537,10 @@ function invalidate() {
 }
 
 function navigate(nextView) {
-  if (exportRunning || busy) return toast('Bitte warte, bis die laufende Aktion fertig ist.');
+  if (exportRunning || busy || publishing.busy) return toast('Bitte warte, bis die laufende Aktion fertig ist.');
   pausePlayer();
   view = nextView;
+  $('#studio-tools').open=false;
   exportState = null;
   player.time = 0;
   render();
@@ -785,20 +796,33 @@ function clearUpload() {
   render();
 }
 
+function prepareUploadSubmission(){
+  if(!uploadFile||publishing.busy)return;
+  if(Number.isFinite(sourceVideo.duration)&&sourceVideo.duration>60){publicationState('failed',null,'Dein Video ist länger als 60 Sekunden. Bitte kürze es vor dem Einreichen.');return;}
+  if(uploadApproved&&!uploadContainsAi&&Number.isFinite(sourceVideo.duration)&&sourceVideo.duration>0&&sourceVideo.duration<=60){
+    const extension=uploadFile.name.split('.').pop().toLowerCase(),mime={mp4:'video/mp4',m4v:'video/mp4',webm:'video/webm',mov:'video/quicktime'}[extension];
+    if(mime)setPublicationFile(new Blob([uploadFile],{type:mime}),'upload',false);
+  }
+}
+publishing.onChange=()=>{
+  document.querySelectorAll('.upload-stage-status').forEach(el=>el.innerHTML=publicationStatusMarkup());
+  document.querySelectorAll('[data-action="submit-grvkn"]').forEach(el=>el.disabled=publishing.busy||!publishing.blob);
+};
+
 function loadVideo(file) {
-  if (!file || exportRunning || busy || activeProduction()) return;
+  if (!file || exportRunning || busy || publishing.busy || activeProduction()) return;
   if (!/\.(mp4|m4v|webm|mov|ogg|ogv)$/i.test(file.name)) return toast('Bitte verwende eine MP4-, WebM-, MOV- oder OGG-Datei.');
   if (file.size > 100 * 1048576) return toast('Dein Video darf höchstens 100 MB groß sein.');
   clearUpload();
   const sequence = ++sourceSequence;
-  uploadFile = file; uploadUrl = URL.createObjectURL(file); sourceVideo.src = uploadUrl;
+  uploadFile = file; uploadUrl = URL.createObjectURL(file); sourceVideo.src = uploadUrl;publicationState('preparing');
   sourceVideo.onloadedmetadata = () => {
     if (sequence !== sourceSequence) return;
-    if (!Number.isFinite(sourceVideo.duration) || sourceVideo.duration <= 0 || !sourceVideo.videoWidth) { clearUpload(); return toast('Das Video hat keine lesbare Dauer oder Bildspur. Bitte exportiere es als MP4 neu.'); }
-    render();
+    if (!Number.isFinite(sourceVideo.duration) || sourceVideo.duration <= 0 || !sourceVideo.videoWidth) { resetPublicationFile();publicationState('failed',null,'Das Video hat keine lesbare Dauer oder Bildspur. Bitte exportiere es als MP4 neu.');render();return; }
+    publicationState('selected');prepareUploadSubmission();render();
   };
   sourceVideo.onloadeddata = () => { if (sequence === sourceSequence) paint(); };
-  sourceVideo.onerror = () => { if (sequence === sourceSequence) { clearUpload(); toast('Dein Browser kann diese Videodatei nicht abspielen. Probiere eine MP4-Datei.'); } };
+  sourceVideo.onerror = () => { if (sequence === sourceSequence) {resetPublicationFile();publicationState('failed',null,'Dein Browser kann diese Videodatei nicht abspielen. Probiere eine MP4-Datei.');render();} };
   sourceVideo.load(); render();
 }
 $('#video-input').addEventListener('change', event => { const file = event.target.files?.[0]; event.target.value = ''; loadVideo(file); });
@@ -1154,17 +1178,14 @@ document.addEventListener('change', event => {
   if (event.target.id === 'own-ad') chooseOwnAd(event.target.value);
   if (event.target.id === 'upload-ai' || event.target.id === 'upload-approved') {
     resetPublicationFile();
-    if (uploadApproved && !uploadContainsAi && uploadFile && Number.isFinite(sourceVideo.duration) && sourceVideo.duration <= 60) {
-      const extension = uploadFile.name.split('.').pop().toLowerCase();
-      const mime = { mp4:'video/mp4', m4v:'video/mp4', webm:'video/webm', mov:'video/quicktime' }[extension];
-      if (mime) setPublicationFile(new Blob([uploadFile], { type: mime }), 'upload', false);
-    }
+    publicationState(Number.isFinite(sourceVideo.duration)?'selected':'preparing');prepareUploadSubmission();
     render();
   }
 });
 document.addEventListener('click', async event => {
   const action = event.target.closest('[data-action]')?.dataset.action;
   if (action === 'sharing') navigate('sharing');
+  if (action === 'own-ad-sharing') {project.grvknAdId=event.target.closest('[data-id]').dataset.id;navigate('sharing');}
   if (action === 'new-upload') { publishing.replacement = ''; publishing.draft = {}; clearUpload(); navigate('upload'); }
   if (action === 'submit-grvkn') {
     try {

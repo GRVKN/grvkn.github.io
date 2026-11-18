@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Administration · GRVKN</title><link rel="icon" href="/studio/assets/grvkn-mark.svg"><link rel="stylesheet" href="/administration/style.css"></head><body>
+<header class="topbar"><a class="brand" href="/studio/"><img src="/studio/assets/grvkn-mark.svg" width="36" height="36" alt="">GRVKN <span>Administration</span></a><nav><a href="/studio/">Zum Studio</a><a href="/app/">Zum Feed ↗</a><button id="signout" hidden>Abmelden</button></nav></header>
+<main><div id="access" role="status">Zugriff wird geprüft …</div><section id="dashboard" hidden>
+<div class="heading"><div><p class="eyebrow">FREIGABEN AN EINEM ORT</p><h1>Was ist neu?</h1><p>Prüfe Einreichungen und entscheide, was in deiner Region sichtbar wird.</p></div><div><button id="refresh" class="primary">Aktualisieren</button><p id="checked" class="muted"></p></div></div>
+<p id="message" role="status" aria-live="polite"></p><div id="counts" class="counts"></div>
+<div class="filters" aria-label="Prüfliste"><label>Einreichungen<select id="kind"><option value="ad">Videos & Beiträge</option><option value="provider">Anbieter</option></select></label><label>Status<select id="status"><option value="pending">Warten auf Prüfung</option><option value="rejected">Abgelehnt</option><option value="active">Freigegeben</option></select></label></div>
+<div id="list" class="cards" aria-live="polite"></div><div class="pagination"><button id="previous">← Zurück</button><span id="page"></span><button id="next">Weitere →</button></div>
+<h2>Kürzlich veröffentlicht</h2><div id="published" class="cards"></div><h2>Letzte Entscheidungen</h2><div id="audit"></div>
+</section></main><dialog id="detail"><div id="detail-body"></div><button id="close-detail">Schließen</button></dialog><script type="module" src="/administration/app.js"></script></body></html>

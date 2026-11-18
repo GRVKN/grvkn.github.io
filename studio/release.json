@@ -1,8 +1,10 @@
 {
-  "release": "alice-companion-part2-20261108",
-  "sourceCommit": "15a56bb7cef135ffb61a5807d4d3c7ee14b37394",
-  "verifiedCommit": "a0791f239b2c395dfc9018f049bcfd9aa0f4937c",
-  "verifiedWorkflowRun": 42458035676,
-  "verifiedArtifact": 13608696509,
-  "preparedAt": "2026-11-08T07:21:55.238664+00:00"
+  "release": "moderation-workspace-voice-20261118",
+  "sourceRepository": "GRVKN/grvkn-app",
+  "sourceCommit": "093adcd68a70652e4b7b702c92f9846cf8ed41ac",
+  "migration": "20261118200539_moderation_dashboard.sql",
+  "edgeVersions": {
+    "studio": 33,
+    "alice": 18
+  }
 }

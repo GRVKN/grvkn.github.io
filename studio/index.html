@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRVKN Studio</title><meta name="description" content="Dein Studio für regionale Videos, Angebote und Recruiting."><link rel="icon" href="/studio/assets/grvkn-mark.svg"><link rel="stylesheet" href="/studio/style.css"><link rel="stylesheet" href="/studio/brand.css"><link rel="stylesheet" href="/studio/pilot.css"><link rel="stylesheet" href="/studio/sharing.css"><link rel="stylesheet" href="/studio/integration.css">  <link rel="stylesheet" href="/studio/workflow.css">
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRVKN Studio</title><meta name="description" content="Dein Studio für regionale Videos, Angebote und Recruiting."><link rel="icon" href="/studio/assets/grvkn-mark.svg"><link rel="stylesheet" href="/studio/style.css"><link rel="stylesheet" href="/studio/brand.css"><link rel="stylesheet" href="/studio/pilot.css"><link rel="stylesheet" href="/studio/sharing.css"><link rel="stylesheet" href="/studio/integration.css">  <link rel="stylesheet" href="/studio/workflow.css"><link rel="stylesheet" href="/studio/workspace.css">
 </head><body><div id="studio-access" role="status" aria-live="polite">Dein Studio wird geladen …</div><div id="studio-root" hidden><svg aria-hidden="true" class="icon-defs" xmlns="http://www.w3.org/2000/svg">
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6L12 3ZM20 2v4m-2-2h4"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></symbol>
@@ -24,26 +24,29 @@
   </svg>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Studio Navigation">
-      <a class="brand" data-view="studio" href="#studio" aria-label="GRVKN Studio Start"><img id="grvkn-logo" class="brand-logo" src="/studio/assets/grvkn-mark.svg" width="44" height="44" alt=""><span class="brand-copy"><strong>GRVKN</strong><small>STUDIO</small></span></a>
-      <div class="nav-kicker">DEIN KREATIVRAUM</div>
-      <nav id="navigation">
-        <button class="nav-item" data-view="overview" title="Studio-Übersicht"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Studio-Übersicht</button>
-        <button class="nav-item active" data-view="studio"><svg class="icon"><use href="#i-spark"/></svg>Video erstellen<span class="nav-dot"></span></button>
-        <button class="nav-item" data-view="upload"><svg class="icon"><use href="#i-upload"/></svg>Video hochladen</button>
-        <button class="nav-item" data-view="projects"><svg class="icon"><use href="#i-grid"/></svg>Meine Projekte<span id="project-count" class="nav-count">0</span></button>
-        <button class="nav-item" data-view="campaigns" title="Monatskampagnen"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Monatskampagnen</button>
-        <button class="nav-item" data-view="quota" title="Generierungskontingent"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg>Generierungskontingent</button>
-        <button class="nav-item" data-view="subscription" title="Studio-Abonnement"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Studio-Abonnement</button>
-        <button class="nav-item" data-view="founder" data-founder-only title="Founder Demo Mode" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Founder Demo Mode</button>
-        <button class="nav-item" data-view="sharing"><svg class="icon"><use href="#i-qr"/></svg>Link & QR</button>
-        <button class="nav-item" data-view="settings"><svg class="icon"><use href="#i-lock"/></svg>Mein Studio</button>
-        <button class="nav-item" data-view="concept"><svg class="icon"><use href="#i-info"/></svg>So funktioniert’s</button>
+      <a class="brand" data-view="overview" href="#overview" aria-label="GRVKN Studio Start"><img id="grvkn-logo" class="brand-logo" src="/studio/assets/grvkn-mark.svg" width="44" height="44" alt=""><span class="brand-copy"><strong>GRVKN</strong><small>STUDIO</small></span></a>
+      <div class="nav-kicker">DEIN STUDIO</div>
+      <nav id="navigation" aria-label="Hauptbereiche">
+        <button class="nav-item" data-view="upload" title="Inhalte veröffentlichen"><svg class="icon"><use href="#i-upload"/></svg><span>Inhalte veröffentlichen</span></button>
+        <button class="nav-item" data-view="studio" title="Inhalte erstellen"><svg class="icon"><use href="#i-spark"/></svg><span>Inhalte erstellen</span></button>
+        <button class="nav-item" data-view="campaigns" title="Monatsplan"><svg class="icon"><use href="#i-file"/></svg><span>Monatsplan</span></button>
+        <button class="nav-item" data-view="projects" title="Meine Projekte"><svg class="icon"><use href="#i-grid"/></svg><span>Meine Projekte</span><span id="project-count" class="nav-count">0</span></button>
+        <details id="studio-tools"><summary>Mehr</summary><div class="studio-tools-list">
+          <button class="nav-item" data-view="overview">Studio-Übersicht</button>
+          <a class="nav-item" data-administration href="/administration/" hidden>Administration</a>
+          <button class="nav-item" data-view="quota">Generierungskontingent</button>
+          <button class="nav-item" data-view="subscription">Studio-Abonnement</button>
+          <button class="nav-item" data-view="founder" data-founder-only hidden>Founder Demo Mode</button>
+          <button class="nav-item" data-view="sharing">Link & QR</button>
+          <button class="nav-item" data-view="settings">Mein Studio</button>
+          <button class="nav-item" data-view="concept">So funktioniert’s</button>
+        </div></details>
       </nav>
       <div class="sidebar-promise"><div class="orbit-mark">↗</div><strong>Große Ideen.<br>Von nebenan.</strong><p>Mach sichtbar, was deine Region besonders macht.</p><span>GRVKN · REGIONAL ENTDECKEN</span></div>
       <div class="workspace-person"><span class="avatar">G</span><div><strong>GRVKN Workspace</strong><small>Private Pilotphase</small></div><svg class="icon"><use href="#i-lock"/></svg></div>
     </aside>
     <main class="main">
-      <header class="topbar"><div class="topbar-left"><a class="mobile-brand" data-view="studio" href="#studio" aria-label="GRVKN Studio Start"><img src="/studio/assets/grvkn-mark.svg" width="28" height="28" alt=""></a><div class="breadcrumb">Workspace <span>/</span> <strong id="breadcrumb-current">Video erstellen</strong></div></div><div class="topbar-right"><a class="button quiet" href="/app/">Zur GRVKN App ↗</a><button class="button quiet" id="studio-signout">Abmelden</button><span class="prototype-tag">STUDIO · PILOT</span><span class="workspace-label"><span class="status-dot"></span> Dein Studio</span></div></header>
+      <header class="topbar"><div class="topbar-left"><a class="mobile-brand" data-view="overview" href="#overview" aria-label="GRVKN Studio Start"><img src="/studio/assets/grvkn-mark.svg" width="28" height="28" alt=""></a><div class="breadcrumb">Workspace <span>/</span> <strong id="breadcrumb-current">Video erstellen</strong></div></div><div class="topbar-right"><a class="button quiet" data-administration href="/administration/" hidden>Administration</a><a class="button quiet" href="/app/">Zur GRVKN App ↗</a><button class="button quiet" id="studio-signout">Abmelden</button><span class="prototype-tag">STUDIO · PILOT</span><span class="workspace-label"><span class="status-dot"></span> Dein Studio</span></div></header>
       <div class="main-body">
         <div class="page-title"><div><p class="eyebrow" id="page-eyebrow">VON DER IDEE ZUM AUFTRITT</p><h1 id="page-heading">Deine Region.<br class="mobile-only"> Dein Video.</h1><p id="page-subtitle">Zeig, was euch ausmacht. Dein Studio macht euch sichtbar.</p></div><button class="button quiet" id="load-example"><svg class="icon"><use href="#i-play"/></svg>Beispiel laden</button></div>
         <div class="demo-notice" id="connection-notice"><svg class="icon"><use href="#i-info"/></svg><p><strong>Dein Pilot-Studio.</strong> Dein Studio wird geladen. Das KI-Paket wird für deinen Anbieter separat freigeschaltet.</p></div>
@@ -71,5 +74,5 @@
   <video id="source-video" playsinline preload="metadata" hidden></video>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><div class="noscript">Bitte aktiviere JavaScript, um das Studio zu nutzen.</div></noscript>
-</div><script type="module" src="/studio/access.js?v=20261115-voice-v2"></script></body></html>
+</div><script type="module" src="/studio/access.js?v=20261118-workspace-v1"></script></body></html>
 

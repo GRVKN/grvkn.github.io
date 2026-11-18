@@ -30,3 +30,7 @@
 .studio-movable.launcher-positioned{right:auto;bottom:auto}
 .studio-movable .panel{position:fixed;right:12px;bottom:12px}
 
+
+/* Keep the default Studio launcher above its navigation; only real controls capture clicks. */
+:host{pointer-events:none}.alice-host{pointer-events:none}.launcher,.panel{pointer-events:auto}
+@media(max-width:620px){.studio-movable:not(.launcher-positioned){bottom:calc(98px + env(safe-area-inset-bottom,0px))}}

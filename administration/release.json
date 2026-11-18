@@ -1,0 +1,10 @@
+{
+  "release": "moderation-workspace-voice-20261118",
+  "sourceRepository": "GRVKN/grvkn-app",
+  "sourceCommit": "093adcd68a70652e4b7b702c92f9846cf8ed41ac",
+  "migration": "20261118200539_moderation_dashboard.sql",
+  "edgeVersions": {
+    "studio": 33,
+    "alice": 18
+  }
+}
