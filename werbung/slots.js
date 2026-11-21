@@ -1,6 +1,6 @@
 import {api,safeLink} from './shared.js';
 import {prepareGoogleSlot} from './google.js';
-import {houseAdMarkup,houseAdCss} from './house-ad.js';
+import {houseAdMarkup,houseAdCss} from './house-ad.js?v=20261121-vivid1';
 export function homepageHouseAd(root) {
  const section=document.createElement('section');section.className='sponsor house-ad';section.setAttribute('aria-label','Werbung · GRVKN Entwicklerstudio');
  section.innerHTML=houseAdMarkup();root.append(section);return section;

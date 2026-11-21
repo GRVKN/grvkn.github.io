@@ -1,5 +1,5 @@
 import {escapeHtml as esc, money} from './shared.js';
-import {houseAdMarkup} from './house-ad.js';
+import {houseAdMarkup} from './house-ad.js?v=20261121-vivid1';
 
 export const placementPreviews = [
   {code:'app_launch', query:'launch', title:'Beim Öffnen der App', short:'App-Start', description:'Dein Sponsorplatz erscheint zusammen mit der GRVKN-Begrüßung. Besucher können direkt zur App weitergehen.', benefit:'Dein Betrieb wird zusätzlich als Sponsor in der App-Begrüßung gezeigt. Dieser Platz gehört nicht zum normalen Videoupload.'},
