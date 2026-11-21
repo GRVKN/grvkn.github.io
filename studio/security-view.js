@@ -3,6 +3,7 @@ export function isFounderDemo(s){return s.cloud.status?.security?.founder===true
 export function studioSecurityView(s,mode='all'){
  const security=s.cloud.status?.security;
  if(!security)return '<section class="studio-security"><h3>KI-Studio wird eingerichtet</h3><p>Webseitenprüfung und KI-Produktion sind verfügbar, sobald der geschützte Server eingerichtet ist. Der bestehende Video-Upload bleibt separat nutzbar.</p></section>';
+ if(security.reason==='closed_test_ai_disabled')return '<section class="studio-security" role="status"><h3>Alice im geschlossenen Test</h3><p>Alice wird gerade für ihren großen Auftritt vorbereitet! Während der Testphase stehen ihre erweiterten KI-Funktionen noch nicht zur Verfügung.</p><p>Die kostenlose App-Hilfe, eigene Entwürfe und der private Testupload bleiben verfügbar.</p></section>';
  const disabled=s.busy?' disabled':'',website=security.website,challenge=s.websiteChallenge;
  const demo = s.founderDraft || {};
  const founder = security.founder ? `<section class="studio-security founder-demo" id="founder-demo">

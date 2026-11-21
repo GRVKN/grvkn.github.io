@@ -45,6 +45,10 @@ export async function submitVideo({ client, provider, user, blob, info, ticket, 
   const extension = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('webm') ? 'webm' : blob.type.includes('quicktime') ? 'mov' : '';
   if (!extension) throw new Error('Bitte exportiere das Video zuerst als MP4 oder WebM.');
   await verify();
+  const release=unwrap(await client.rpc('get_my_release_access'), 'Dein Testzugang konnte nicht geprüft werden. Bitte später erneut versuchen.');
+  if(!['ad-videos','closed-test-videos'].includes(release?.uploadBucket))throw new Error('Dein Upload-Zugang konnte nicht bestätigt werden.');
+  const bucket=release.uploadBucket;
+  if(blob.size>release.maxVideoBytes)throw new Error(release.closedTest?'Im geschlossenen Test sind kurze Videos bis 20 MB erlaubt.':'Das Video überschreitet die Upload-Grenze.');
   let training, property;
   if (!replacement && type === 'jobs_training') {
     if (!['apprenticeship','internship','dual_study','career_insight','full_time_job','part_time_job','mini_job'].includes(info.opportunityType) || String(info.occupation||'').trim().length < 3) throw new Error('Bitte ergänze die Art der Stelle und die Berufsbezeichnung.');
@@ -63,7 +67,8 @@ export async function submitVideo({ client, provider, user, blob, info, ticket, 
   try {
     // Recover a lost response before creating/uploading another copy.
     const previous=await client.from('ads').select('id,status,video_url').eq('id',adId).eq('business_id',provider.business_id).maybeSingle();
-    const expectedUrl=client.storage.from('ad-videos').getPublicUrl(path).data.publicUrl;
+    const publicUrl=client.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    const expectedUrl=bucket==='closed-test-videos'?publicUrl.replace('/object/public/','/object/authenticated/'):publicUrl;
     if(!previous.error&&previous.data&&['pending','active'].includes(previous.data.status)&&previous.data.video_url===expectedUrl){onState('submitted');return adId;}
     if (replacement) {
       const current = unwrap(await client.from('ads').select('id,business_id,content_type').eq('id', adId).eq('business_id', provider.business_id).single(), 'Dieser Beitrag gehört nicht zu deinem Anbieter.');
@@ -77,8 +82,8 @@ export async function submitVideo({ client, provider, user, blob, info, ticket, 
     }
     await verify();
     onState('uploading',0);
-    unwrap(await (upload?upload({client,path,blob,onProgress:percent=>onState('uploading',percent)}):client.storage.from('ad-videos').upload(path, blob, { contentType: blob.type.split(';')[0], upsert: false })), 'Dein Video konnte nicht hochgeladen werden. Der Beitrag ist noch nicht öffentlich.'); uploaded = true;onState('uploaded');
-    videoUrl = client.storage.from('ad-videos').getPublicUrl(path).data.publicUrl;
+    unwrap(await (upload?upload({client,path,blob,bucket,onProgress:percent=>onState('uploading',percent)}):client.storage.from(bucket).upload(path, blob, { contentType: blob.type.split(';')[0], upsert: false })), 'Dein Video konnte nicht hochgeladen werden. Der Beitrag ist noch nicht öffentlich.'); uploaded = true;onState('uploaded');
+    videoUrl = expectedUrl;
     await verify();
     unwrap(await client.from('ads').update({ video_url: videoUrl, status: 'pending', submitted_at: new Date().toISOString(), ...(aiMetadata ? { contains_ai: containsAi, ai_label: containsAi ? 'Mit KI generiert' : null } : {}) }).eq('id', adId).eq('business_id',provider.business_id).select('id').single(), 'Das Video wurde übertragen; der Einreichungsstatus konnte noch nicht bestätigt werden.');
     onState('submitted');return adId;
@@ -87,7 +92,7 @@ export async function submitVideo({ client, provider, user, blob, info, ticket, 
     const check = await client.from('ads').select('id,status,video_url').eq('id', adId).eq('business_id',provider.business_id).maybeSingle();
     if (!check.error && ['pending','active'].includes(check.data?.status) && videoUrl && check.data.video_url === videoUrl){onState('submitted');return adId;}
     if (!check.error && check.data?.status === 'draft' && created) {
-      if (uploaded) await client.storage.from('ad-videos').remove([path]);
+      if (uploaded) await client.storage.from(bucket).remove([path]);
       await client.rpc('delete_my_ad', { p_ad_id: adId });
     }
     throw error;
